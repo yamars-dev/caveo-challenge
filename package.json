@@ -1,0 +1,20 @@
+{
+  "name": "caveo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "koa": "^3.0.1",
+    "koa-bodyparser": "^4.4.1",
+    "koa-logger": "^4.0.0",
+    "koa-router": "^14.0.0",
+    "koa-static": "^5.0.0"
+  }
+}
