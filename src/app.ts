@@ -1,27 +1,22 @@
-
+import 'dotenv/config';
 import Koa from 'koa';
-import * as Router from 'koa-router';
+import Router from '@koa/router';
 import bodyParser from 'koa-bodyparser';
 import logger from 'koa-logger';
 import serve from 'koa-static';
 
-
 const app = new Koa();
-const router = new (Router as any)();
+const router = new Router() as any;
 
-
-router.get('/', async (ctx: Router.IRouterContext, next: () => Promise<any>) => {
+router.get('/', async (ctx: any) => {
   ctx.body = 'Hello, Koa!';
-  await next();
 });
 
-
 app.use(logger());
-app.use(bodyParser({}));
+app.use(bodyParser());
 app.use(router.routes());
 app.use(router.allowedMethods());
-import { Middleware } from 'koa';
-app.use(serve('public') as Middleware);
+app.use(serve('public') as any);
 
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
