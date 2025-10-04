@@ -16,6 +16,9 @@ export const AppDataSource = new DataSource({
   database: DB_NAME,
   synchronize: true,
   entities: [UserEntity],
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 export const connectDatabase = async (app: Koa): Promise<void> => {

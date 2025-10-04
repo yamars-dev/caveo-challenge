@@ -10,18 +10,20 @@ import { UsersController } from './controllers/user.controller.js';
 
 const app = new Koa();
 
-connectDatabase(app).then(() => {
-  console.log('Database connected successfully');
-}).catch((error) => {
-  console.error('Database connection failed:', error);
-});
+connectDatabase(app)
+  .then(() => {
+    console.log('Database connected successfully');
+  })
+  .catch((error) => {
+    console.error('Database connection failed:', error);
+  });
 
 app.use(logger());
 app.use(bodyParser());
 app.use(serve('public') as any);
 
 useKoaServer(app, {
-  controllers: [ UsersController],
+  controllers: [UsersController],
   routePrefix: '/api',
   defaultErrorHandler: false,
 });
