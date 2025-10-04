@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import Koa from 'koa';
+import { UserEntity } from './user.entity';
 
 config();
 
@@ -14,6 +15,7 @@ export const AppDataSource = new DataSource({
   password: DB_PASSWORD,
   database: DB_NAME,
   synchronize: true,
+  entities: [UserEntity],
 });
 
 export const connectDatabase = async (app: Koa): Promise<void> => {

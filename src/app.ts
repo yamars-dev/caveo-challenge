@@ -1,10 +1,11 @@
+import 'reflect-metadata';
 import 'dotenv/config';
 import Koa from 'koa';
 import Router from '@koa/router';
 import bodyParser from 'koa-bodyparser';
 import logger from 'koa-logger';
 import serve from 'koa-static';
-import { connectDatabase } from './entities/index.ts';
+import { connectDatabase } from './entities/index.js';
 
 const app = new Koa();
 const router = new Router() as any;
