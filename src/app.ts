@@ -4,9 +4,16 @@ import Router from '@koa/router';
 import bodyParser from 'koa-bodyparser';
 import logger from 'koa-logger';
 import serve from 'koa-static';
+import { connectDatabase } from './entities/index.ts';
 
 const app = new Koa();
 const router = new Router() as any;
+
+connectDatabase(app).then(() => {
+  console.log('Database connected successfully');
+}).catch((error) => {
+  console.error('Database connection failed:', error);
+});
 
 router.get('/', async (ctx: any) => {
   ctx.body = 'Hello, Koa!';
