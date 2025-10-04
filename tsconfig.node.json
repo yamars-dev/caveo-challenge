@@ -1,0 +1,10 @@
+{
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext"
+  }
+}
