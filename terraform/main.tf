@@ -84,14 +84,21 @@ resource "aws_db_instance" "postgres" {
 }
 
 # ============================================
-# COGNITO USER POOL
+# COGNITO USER POOL - SEM VERIFICAÇÃO DE EMAIL
 # ============================================
 resource "aws_cognito_user_pool" "main" {
-  name = "caveo-user-pool"
+  name = "caveo-user-pool-v2"
 
-  username_attributes      = ["email"]
-  auto_verified_attributes = ["email"]
+  # ✅ Username é email, mas SEM verificação obrigatória
+  username_attributes = ["email"]
+  
+  # ✅ CRÍTICO: Lista vazia = SEM verificação automática
+  auto_verified_attributes = []
+  
+  # MFA desabilitado
+  mfa_configuration = "OFF"
 
+  # Política de senha
   password_policy {
     minimum_length    = 8
     require_lowercase = true
@@ -100,6 +107,7 @@ resource "aws_cognito_user_pool" "main" {
     require_uppercase = true
   }
 
+  # Atributos obrigatórios
   schema {
     name                = "email"
     attribute_data_type = "String"
@@ -114,12 +122,23 @@ resource "aws_cognito_user_pool" "main" {
     mutable             = true
   }
 
+  # Configuração de email (necessário mesmo sem verificação)
   email_configuration {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
+  # Configuração de recuperação de conta (via email, mas sem exigir verificação no cadastro)
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
+    }
+  }
+
   tags = {
-    Name = "caveo-user-pool"
+    Name         = "caveo-user-pool"
+    Verification = "disabled"
+    Version      = "v2"
   }
 }
 
@@ -127,15 +146,17 @@ resource "aws_cognito_user_pool" "main" {
 # COGNITO USER POOL CLIENT
 # ============================================
 resource "aws_cognito_user_pool_client" "client" {
-  name         = "caveo-app-client"
+  name         = "caveo-app-client-v2"
   user_pool_id = aws_cognito_user_pool.main.id
 
+  # Auth flows permitidos
   explicit_auth_flows = [
     "ALLOW_USER_PASSWORD_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
     "ALLOW_USER_SRP_AUTH"
   ]
 
+  # Validade dos tokens
   access_token_validity  = 60
   id_token_validity      = 60
   refresh_token_validity = 30
@@ -146,10 +167,15 @@ resource "aws_cognito_user_pool_client" "client" {
     refresh_token = "days"
   }
 
+  # Public client (sem secret)
   generate_secret = false
 
-  read_attributes  = ["email", "email_verified", "name"]
+  # ✅ Atributos (removido email_verified já que não verificamos)
+  read_attributes  = ["email", "name"]
   write_attributes = ["email", "name"]
+
+  # Prevenir enumeração de usuários
+  prevent_user_existence_errors = "ENABLED"
 }
 
 # ============================================
