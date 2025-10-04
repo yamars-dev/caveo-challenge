@@ -7,8 +7,14 @@ import serve from 'koa-static';
 import { useKoaServer } from 'routing-controllers';
 import { connectDatabase } from './entities/index.js';
 import { UsersController } from './controllers/user.controller.js';
-
+import { AuthController } from './controllers/auth.controller.js';
 const app = new Koa();
+app.use(bodyParser());
+
+useKoaServer(app, {
+  routePrefix: '/api',
+  controllers: [AuthController],
+});
 
 connectDatabase(app)
   .then(() => {
@@ -29,6 +35,20 @@ useKoaServer(app, {
 });
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+
+
+(async () => {
+  try {
+    await connectDatabase(app);
+    console.log('✅ Database connected');
+
+    app.listen(PORT, () => {
+      console.log(` Server running on http://localhost:${PORT}`);
+      console.log(` Routes:`);
+      console.log(`   POST /api/auth (register or login - no email confirmation needed)`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+})();
