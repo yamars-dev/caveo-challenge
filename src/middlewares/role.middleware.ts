@@ -2,7 +2,7 @@ import { Context, Next } from 'koa';
 
 export const roleMiddleware = (...requiredRoles: string[]) => {
     return async (ctx: Context, next: Next) => {
-        const userGroups = ctx.state.user?.['cognito:groups'] || [];
+        const userGroups = ctx.state.user?.groups[0] || [];
 
         const hasRole = requiredRoles.some(role => userGroups.includes(role));
 

@@ -8,12 +8,29 @@ import { useKoaServer } from 'routing-controllers';
 import { connectDatabase } from './entities/index.js';
 import { UsersController } from './controllers/user.controller.js';
 import { AuthController } from './controllers/auth.controller.js';
+import { AccountController } from './controllers/account.controller.js';
+import { Context } from 'koa';
+import { authMiddleware } from './middlewares/auth.middleware.js';
+
+
 const app = new Koa();
+app.use(logger());
 app.use(bodyParser());
+app.use(serve('public') as any);
 
 useKoaServer(app, {
   routePrefix: '/api',
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController, AccountController],
+  authorizationChecker: async (action) => {
+    const ctx: Context = action.context;
+    return new Promise((resolve) => {
+      authMiddleware(ctx, async () => {
+        resolve(!!ctx.state.user);
+      }).catch(() => resolve(false));
+    });
+  },
+
+  defaultErrorHandler: false,
 });
 
 connectDatabase(app)
@@ -24,15 +41,9 @@ connectDatabase(app)
     console.error('Database connection failed:', error);
   });
 
-app.use(logger());
-app.use(bodyParser());
-app.use(serve('public') as any);
 
-useKoaServer(app, {
-  controllers: [UsersController],
-  routePrefix: '/api',
-  defaultErrorHandler: false,
-});
+
+
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
@@ -52,3 +63,4 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
     process.exit(1);
   }
 })();
+
