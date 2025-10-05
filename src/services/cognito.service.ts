@@ -3,6 +3,8 @@ import {
   SignUpCommand,
   InitiateAuthCommand,
   AdminAddUserToGroupCommand,
+  UpdateUserAttributesCommand,
+  AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 
 const client = new CognitoIdentityProviderClient({
@@ -100,6 +102,74 @@ export class CognitoService {
     });
 
     await client.send(command);
+  }
+
+  async updateUserAttributes(accessToken: string, attributes: { name?: string }) {
+    try {
+      const userAttributes = [];
+      
+      if (attributes.name) {
+        userAttributes.push({ Name: 'name', Value: attributes.name });
+      }
+
+      if (userAttributes.length === 0) {
+        return; 
+      }
+
+      const command = new UpdateUserAttributesCommand({
+        AccessToken: accessToken,
+        UserAttributes: userAttributes,
+      });
+
+      await client.send(command);
+    } catch (error: any) {
+      console.error('UpdateUserAttributes Error:', error);
+      
+      if (error.name === 'InvalidParameterException') {
+        throw new Error('Invalid attribute value');
+      }
+      
+      if (error.name === 'NotAuthorizedException') {
+        throw new Error('Invalid or expired access token');
+      }
+      
+      throw new Error(error.message || 'Failed to update user attributes');
+    }
+  }
+
+
+  async adminUpdateUserAttributes(username: string, attributes: { name?: string }) {
+    try {
+      const userAttributes = [];
+      
+      if (attributes.name) {
+        userAttributes.push({ Name: 'name', Value: attributes.name });
+      }
+
+      if (userAttributes.length === 0) {
+        return;
+      }
+
+      const command = new AdminUpdateUserAttributesCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: username,
+        UserAttributes: userAttributes,
+      });
+
+      await client.send(command);
+    } catch (error: any) {
+      console.error('AdminUpdateUserAttributes Error:', error);
+      
+      if (error.name === 'UserNotFoundException') {
+        throw new Error('User not found');
+      }
+      
+      if (error.name === 'InvalidParameterException') {
+        throw new Error('Invalid attribute value');
+      }
+      
+      throw new Error(error.message || 'Failed to update user attributes');
+    }
   }
 }
 

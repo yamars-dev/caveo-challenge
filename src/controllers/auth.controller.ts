@@ -1,5 +1,6 @@
 import { JsonController, Post, Body, HttpCode } from 'routing-controllers';
 import { SignInOrRegisterDto } from '../dtos/auth.dto';
+import { UserProfileResponse } from '../dtos/account.dto';
 import { authService } from '../services/auth.service';
 
 
@@ -15,15 +16,17 @@ export class AuthController {
             data.name
         );
 
+        const userResponse: UserProfileResponse = {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role as 'admin' | 'user',
+            isOnboarded: result.user.isOnboarded,
+        };
+
         return {
             message: result.isNewUser ? 'Registration successful' : 'Login successful',
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                name: result.user.name,
-                role: result.user.role,
-                isOnboarded: result.user.isOnboarded,
-            },
+            user: userResponse,
             tokens: result.tokens,
         };
     }
