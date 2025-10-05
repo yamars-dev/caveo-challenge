@@ -1,0 +1,19 @@
+# Environment configuration
+# This file defines which environment variables source to use
+
+# Environment mode
+# - development: uses .env file
+# - production: uses AWS Secrets Manager
+mode: development
+
+# AWS Secrets Manager configuration (used when mode=production)
+secrets_manager:
+  enabled: false
+  region: us-east-1
+  secrets:
+    rds: caveo/rds/credentials
+    app: caveo/app/environment
+
+# Fallback behavior
+# If Secrets Manager fails, should we fall back to .env?
+fallback_to_env: true

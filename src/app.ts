@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import 'dotenv/config';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import pinoHttp from 'pino-http';
@@ -14,6 +13,7 @@ import { Context } from 'koa';
 import { authMiddleware } from './middlewares/auth.middleware.js';
 import { logger } from './helpers/logger.js';
 import { swaggerSpec } from './config/swagger.js';
+import { initializeEnvironment } from './config/env-loader.js';
 
 
 const app = new Koa();
@@ -68,26 +68,18 @@ useKoaServer(app, {
   defaultErrorHandler: false,
 });
 
-connectDatabase(app)
-  .then(() => {
-    logger.info('Database connected successfully');
-  })
-  .catch((error) => {
-    logger.error({ err: error }, 'Database connection failed');
-  });
-
-
-
-
-
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
-
-
 (async () => {
   try {
+    // Load environment variables from config.yml
+    await initializeEnvironment();
+
+    const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+    // Connect to database
     await connectDatabase(app);
     logger.info('Database connected');
 
+    // Start server
     app.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}`);
       logger.info('Available routes:');

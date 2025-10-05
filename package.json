@@ -42,7 +42,8 @@
     "routing-controllers-openapi": "^5.0.0",
     "swagger-ui-koa": "^0.0.1",
     "typedi": "^0.10.0",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.27",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.901.0",

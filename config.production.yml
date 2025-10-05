@@ -1,0 +1,13 @@
+# Production configuration
+# Use this file when deploying to production with AWS Secrets Manager
+
+mode: production
+
+secrets_manager:
+  enabled: true
+  region: us-east-1
+  secrets:
+    rds: caveo/rds/credentials
+    app: caveo/app/environment
+
+fallback_to_env: true
