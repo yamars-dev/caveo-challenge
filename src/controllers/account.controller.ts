@@ -1,4 +1,5 @@
 import { JsonController, Get, Put, Body, Ctx, Authorized } from 'routing-controllers';
+import { OpenAPI } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
 import { extractToken } from '../helpers/jwt.helper.js';
@@ -10,6 +11,34 @@ import { logger } from '../helpers/logger.js';
 export class AccountController {
   @Get('/me')
   @Authorized()
+  @OpenAPI({
+    summary: 'Get current user profile',
+    description: 'Returns the authenticated user profile information',
+    tags: ['Account'],
+    security: [{ bearerAuth: [] }],
+    responses: {
+      '200': {
+        description: 'User profile retrieved successfully',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'abc-123' },
+                email: { type: 'string', example: 'user@example.com' },
+                name: { type: 'string', example: 'John Doe' },
+                groups: { type: 'string', example: 'user' },
+                tokenUse: { type: 'string', example: 'id' },
+                authTime: { type: 'number' },
+                exp: { type: 'number' },
+              },
+            },
+          },
+        },
+      },
+      '401': { description: 'Unauthorized - Invalid or missing token' },
+    },
+  })
   async getProfile(@Ctx() ctx: Context) {
     const user = ctx.state.user;
     if (!user) {
@@ -32,6 +61,46 @@ export class AccountController {
 
   @Put('/edit')
   @Authorized()
+  @OpenAPI({
+    summary: 'Edit user profile',
+    description: 'Update user profile. Users can edit their own name. Admins can edit name and role of any user.',
+    tags: ['Account'],
+    security: [{ bearerAuth: [] }],
+    requestBody: {
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'Jane Doe' },
+              role: { type: 'string', enum: ['user', 'admin'], example: 'user' },
+              userId: { type: 'string', example: 'abc-123', description: 'Target user ID (admin only)' },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      '200': {
+        description: 'Profile updated successfully',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                message: { type: 'string', example: 'Profile updated successfully' },
+                user: { $ref: '#/components/schemas/UserProfileResponse' },
+              },
+            },
+          },
+        },
+      },
+      '401': { description: 'Unauthorized - Invalid or missing token' },
+      '403': { description: 'Forbidden - Insufficient permissions' },
+      '404': { description: 'User not found' },
+      '500': { description: 'Internal server error' },
+    },
+  })
   async editAccount(@Body() data: UpdateProfileDto, @Ctx() ctx: Context) {
     const user = ctx.state.user;
     const log = (ctx as any).log || logger;

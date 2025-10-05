@@ -1,4 +1,5 @@
 import { JsonController, Post, Body, HttpCode, Ctx } from 'routing-controllers';
+import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { SignInOrRegisterDto } from '../dtos/auth.dto';
 import { UserProfileResponse } from '../dtos/account.dto';
@@ -11,6 +12,54 @@ export class AuthController {
  
     @Post('/')
     @HttpCode(200)
+    @OpenAPI({
+        summary: 'Sign in or register user',
+        description: 'Authenticate existing user or register new user.',
+        tags: ['Authentication'],
+        requestBody: {
+            content: {
+                'application/json': {
+                    schema: {
+                        type: 'object',
+                        required: ['email', 'password'],
+                        properties: {
+                            email: { type: 'string', format: 'email', example: 'user@example.com' },
+                            password: { type: 'string', format: 'password', example: 'SecurePass123!' },
+                            name: { type: 'string', example: 'John Doe' },
+                        },
+                    },
+                },
+            },
+        },
+        responses: {
+            '200': {
+                description: 'Authentication successful',
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                message: { type: 'string', example: 'Login successful' },
+                                user: { $ref: '#/components/schemas/UserProfileResponse' },
+                                tokens: {
+                                    type: 'object',
+                                    properties: {
+                                        AccessToken: { type: 'string' },
+                                        IdToken: { type: 'string' },
+                                        RefreshToken: { type: 'string' },
+                                        ExpiresIn: { type: 'number', example: 3600 },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            '400': { description: 'Invalid credentials or validation error' },
+            '500': { description: 'Internal server error' },
+        },
+        security: [],
+    })
     async signInOrRegister(@Body() data: SignInOrRegisterDto, @Ctx() ctx: Context) {
         const log = (ctx as any).log || logger;
         
