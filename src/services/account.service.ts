@@ -40,6 +40,12 @@ export class AccountService {
       'Profile update attempt'
     );
 
+    // Usuários não-admin não podem editar outros usuários
+    if (!isAdmin && data.userId && data.userId !== currentUserId) {
+      logger.warn({ currentUserId, requestedUserId: data.userId }, 'Unauthorized profile edit attempt');
+      throw new Error('You can only edit your own profile');
+    }
+
     let targetUserId = currentUserId; 
 
     if (isAdmin && data.userId) {
@@ -53,11 +59,6 @@ export class AccountService {
     }
 
     if (!isAdmin) {
-      if (targetUserId !== currentUserId) {
-        logger.warn({ currentUserId, targetUserId }, 'Unauthorized profile edit attempt');
-        throw new Error('You can only edit your own profile');
-      }
-
       if (data.role) {
         logger.warn({ currentUserId, requestedRole: data.role }, 'Unauthorized role change attempt');
         throw new Error('You do not have permission to change roles');
