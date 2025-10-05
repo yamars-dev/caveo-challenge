@@ -2,6 +2,7 @@ import { AppDataSource } from '../entities';
 import { UserEntity } from '../entities/user.entity';
 import { cognitoService } from './cognito.service';
 import { UpdateProfileDto, UserProfileResponse } from '../dtos/account.dto';
+import { logger } from '../helpers/logger.js';
 
 interface UpdateProfileParams {
   currentUserId: string;
@@ -34,6 +35,11 @@ export class AccountService {
     const { currentUserId, isAdmin, accessToken, data } = params;
     const userRepo = AppDataSource.getRepository(UserEntity);
 
+    logger.info(
+      { currentUserId, isAdmin, targetUserId: data.userId, requestedChanges: Object.keys(data) },
+      'Profile update attempt'
+    );
+
     let targetUserId = currentUserId; 
 
     if (isAdmin && data.userId) {
@@ -48,10 +54,12 @@ export class AccountService {
 
     if (!isAdmin) {
       if (targetUserId !== currentUserId) {
+        logger.warn({ currentUserId, targetUserId }, 'Unauthorized profile edit attempt');
         throw new Error('You can only edit your own profile');
       }
 
       if (data.role) {
+        logger.warn({ currentUserId, requestedRole: data.role }, 'Unauthorized role change attempt');
         throw new Error('You do not have permission to change roles');
       }
     }
@@ -71,7 +79,7 @@ export class AccountService {
       try {
         await cognitoService.addToGroup(dbUser.email, data.role);
       } catch (error: any) {
-        console.error('Failed to update Cognito group:', error.message);
+        logger.error({ err: error, userId: dbUser.id, role: data.role }, 'Failed to update Cognito group');
       }
     }
 
@@ -83,9 +91,14 @@ export class AccountService {
           name: data.name,
         });
       } catch (error: any) {
-        console.error('Failed to update Cognito attributes:', error.message);
+        logger.error({ err: error, userId: dbUser.id }, 'Failed to update Cognito attributes');
       }
     }
+
+    logger.info(
+      { userId: dbUser.id, updatedFields: Object.keys(data), isOnboarded: dbUser.isOnboarded },
+      'Profile updated successfully'
+    );
 
     return {
       id: dbUser.id,

@@ -6,6 +6,7 @@ import {
   UpdateUserAttributesCommand,
   AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { logger } from '../helpers/logger.js';
 
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -32,7 +33,7 @@ export class CognitoService {
       
       return response.UserSub;
     } catch (error: any) {
-      console.error('SignUp Error:', error);
+      logger.error({ err: error, email }, 'SignUp failed');
 
       if (error.name === 'UsernameExistsException') {
         throw new Error('Email already registered');
@@ -71,7 +72,7 @@ export class CognitoService {
         ExpiresIn: authResult?.ExpiresIn!,
       };
     } catch (error: any) {
-      console.error('SignIn Error:', error);
+      logger.error({ err: error, email }, 'SignIn failed');
 
       if (error.name === 'UserNotFoundException') {
         throw new Error('Invalid email or password');
@@ -123,7 +124,7 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-      console.error('UpdateUserAttributes Error:', error);
+      logger.error({ err: error, accessToken: '[REDACTED]' }, 'UpdateUserAttributes failed');
       
       if (error.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
@@ -158,7 +159,7 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-      console.error('AdminUpdateUserAttributes Error:', error);
+      logger.error({ err: error, username }, 'AdminUpdateUserAttributes failed');
       
       if (error.name === 'UserNotFoundException') {
         throw new Error('User not found');

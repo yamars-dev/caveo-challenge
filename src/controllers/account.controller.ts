@@ -3,6 +3,7 @@ import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
 import { extractToken } from '../helpers/jwt.helper.js';
 import { UpdateProfileDto, UserProfileResponse } from '../dtos/account.dto.js';
+import { logger } from '../helpers/logger.js';
 
 
 @JsonController('/account')
@@ -33,6 +34,7 @@ export class AccountController {
   @Authorized()
   async editAccount(@Body() data: UpdateProfileDto, @Ctx() ctx: Context) {
     const user = ctx.state.user;
+    const log = (ctx as any).log || logger;
     
     if (!user) {
       ctx.status = 401;
@@ -59,7 +61,7 @@ export class AccountController {
         user: updatedUser,
       };
     } catch (error: any) {
-      console.error('Edit account error:', error);
+      log.error({ err: error, userId: user.id }, 'Edit account failed');
       
       if (
         error.message.includes('permission') ||
