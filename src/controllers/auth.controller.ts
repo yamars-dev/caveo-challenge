@@ -3,6 +3,7 @@ import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { SignInOrRegisterDto } from '../dtos/auth.dto';
 import { UserProfileResponse } from '../dtos/account.dto';
+import { AuthResponseDto, ErrorResponseDto } from '../dtos/response.dto';
 import { authService } from '../services/auth.service';
 import { logger } from '../helpers/logger.js';
 
@@ -60,7 +61,7 @@ export class AuthController {
         },
         security: [],
     })
-    async signInOrRegister(@Body() data: SignInOrRegisterDto, @Ctx() ctx: Context) {
+    async signInOrRegister(@Body() data: SignInOrRegisterDto, @Ctx() ctx: Context): Promise<AuthResponseDto> {
         const log = (ctx as any).log || logger;
         
         log.info({ email: data.email }, 'Authentication attempt');

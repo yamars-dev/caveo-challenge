@@ -4,6 +4,7 @@ import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
 import { extractToken } from '../helpers/jwt.helper.js';
 import { UpdateProfileDto, UserProfileResponse } from '../dtos/account.dto.js';
+import { GetProfileResponseDto, EditProfileResponseDto, ErrorResponseDto } from '../dtos/response.dto.js';
 import { logger } from '../helpers/logger.js';
 
 
@@ -39,7 +40,7 @@ export class AccountController {
       '401': { description: 'Unauthorized - Invalid or missing token' },
     },
   })
-  async getProfile(@Ctx() ctx: Context) {
+  async getProfile(@Ctx() ctx: Context): Promise<GetProfileResponseDto | ErrorResponseDto> {
     const user = ctx.state.user;
     if (!user) {
       return {
@@ -101,7 +102,7 @@ export class AccountController {
       '500': { description: 'Internal server error' },
     },
   })
-  async editAccount(@Body() data: UpdateProfileDto, @Ctx() ctx: Context) {
+  async editAccount(@Body() data: UpdateProfileDto, @Ctx() ctx: Context): Promise<EditProfileResponseDto | ErrorResponseDto> {
     const user = ctx.state.user;
     const log = (ctx as any).log || logger;
     
@@ -146,7 +147,10 @@ export class AccountController {
 
       if (error.message === 'User not found') {
         ctx.status = 404;
-        return { error: 'User not found' };
+        return {
+          error: 'User not found',
+          message: 'User not found',
+        };
       }
 
       ctx.status = 500;

@@ -20,10 +20,10 @@ export class AuthService {
           isOnboarded: user.isOnboarded,
         },
         tokens: {
-          accessToken: tokens.AccessToken,
-          idToken: tokens.IdToken,
-          refreshToken: tokens.RefreshToken,
-          expiresIn: tokens.ExpiresIn,
+          AccessToken: tokens.AccessToken,
+          IdToken: tokens.IdToken,
+          RefreshToken: tokens.RefreshToken,
+          ExpiresIn: tokens.ExpiresIn,
         },
         isNewUser: false,
       };
@@ -57,10 +57,10 @@ export class AuthService {
         isOnboarded: newUser.isOnboarded,
       },
       tokens: {
-        accessToken: tokens.AccessToken,
-        idToken: tokens.IdToken,
-        refreshToken: tokens.RefreshToken,
-        expiresIn: tokens.ExpiresIn,
+        AccessToken: tokens.AccessToken,
+        IdToken: tokens.IdToken,
+        RefreshToken: tokens.RefreshToken,
+        ExpiresIn: tokens.ExpiresIn,
       },
       isNewUser: true,
     };
