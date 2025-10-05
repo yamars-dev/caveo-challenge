@@ -53,6 +53,20 @@ app.use(async (ctx, next) => {
   await next();
 });
 
+// Health check endpoint
+app.use(async (ctx, next) => {
+  if (ctx.path === '/health') {
+    ctx.body = { 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    };
+    ctx.status = 200;
+    return;
+  }
+  await next();
+});
+
 useKoaServer(app, {
   routePrefix: '/api',
   controllers: [AuthController, UsersController, AccountController],
