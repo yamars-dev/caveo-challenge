@@ -133,19 +133,21 @@ export class AccountController {
     } catch (error: any) {
       log.error({ err: error, userId: user.id }, 'Edit account failed');
       
+      const errorMessage = error?.message || '';
+      
       if (
-        error.message.includes('permission') ||
-        error.message.includes('only edit your own') ||
-        error.message.includes('cannot demote yourself')
+        errorMessage.includes('permission') ||
+        errorMessage.includes('only edit your own') ||
+        errorMessage.includes('cannot demote yourself')
       ) {
         ctx.status = 403;
         return {
           error: 'Forbidden',
-          message: error.message,
+          message: errorMessage,
         };
       }
 
-      if (error.message === 'User not found') {
+      if (errorMessage === 'User not found') {
         ctx.status = 404;
         return {
           error: 'User not found',
@@ -156,7 +158,7 @@ export class AccountController {
       ctx.status = 500;
       return {
         error: 'Internal server error',
-        message: error.message || 'Failed to update profile',
+        message: errorMessage || 'Failed to update profile',
       };
     }
   }
