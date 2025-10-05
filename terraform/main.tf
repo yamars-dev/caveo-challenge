@@ -1,3 +1,6 @@
+# terraform/main.tf
+
+# Complete Caveo API Infrastructure
 terraform {
   required_providers {
     aws = {
@@ -5,44 +8,149 @@ terraform {
       version = "~> 5.0"
     }
   }
+  required_version = ">= 1.0"
 }
 
 provider "aws" {
   region = var.aws_region
 }
 
-# ============================================
-# VPC (usando VPC padrão para simplificar)
-# ============================================
-resource "aws_default_vpc" "default" {
+# Variables
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+  default     = "prod"
+}
+
+variable "db_host" {
+  description = "Database host (RDS endpoint)"
+  type        = string
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  type        = string
+}
+
+variable "cognito_client_id" {
+  description = "Cognito Client ID"
+  type        = string
+}
+
+# Secrets Manager secret for application environment
+resource "aws_secretsmanager_secret" "caveo_app_environment" {
+  name                    = "caveo/app/environment"
+  description             = "Caveo API environment variables"
+  recovery_window_in_days = 7
+
   tags = {
-    Name = "Default VPC"
+    Application = "caveo-api"
+    Environment = var.environment
+    ManagedBy   = "terraform"
   }
 }
 
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [aws_default_vpc.default.id]
+# Secrets Manager secret version with actual values
+resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
+  secret_id = aws_secretsmanager_secret.caveo_app_environment.id
+  
+  secret_string = jsonencode({
+    NODE_ENV            = "production"
+    PORT                = "3000"
+    DB_HOST             = var.db_host
+    DB_PORT             = "5432"
+    DB_USERNAME         = "caveo_user"
+    DB_PASSWORD         = var.db_password
+    DB_DATABASE         = "caveo_db"
+    AWS_REGION          = var.aws_region
+    COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+    COGNITO_CLIENT_ID   = var.cognito_client_id
+  })
+}
+
+# IAM role for EC2 instances
+resource "aws_iam_role" "caveo_ec2_role" {
+  name = "caveo-ec2-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Application = "caveo-api"
+    Environment = var.environment
   }
 }
 
-# ============================================
-# SECURITY GROUP - RDS
-# ============================================
-resource "aws_security_group" "rds" {
-  name        = "caveo-rds-sg"
-  description = "Security group for RDS PostgreSQL"
-  vpc_id      = aws_default_vpc.default.id
+# IAM policy for Secrets Manager access
+resource "aws_iam_role_policy" "caveo_secrets_policy" {
+  name = "caveo-secrets-policy-${var.environment}"
+  role = aws_iam_role.caveo_ec2_role.id
 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = aws_secretsmanager_secret.caveo_app_environment.arn
+      }
+    ]
+  })
+}
+
+# Instance profile for EC2
+resource "aws_iam_instance_profile" "caveo_ec2_profile" {
+  name = "caveo-ec2-profile-${var.environment}"
+  role = aws_iam_role.caveo_ec2_role.name
+}
+
+# Security group for Caveo API
+resource "aws_security_group" "caveo_api" {
+  name_prefix = "caveo-api-${var.environment}-"
+  description = "Security group for Caveo API EC2 instances"
+
+  # HTTP traffic for API
   ingress {
-    from_port   = 5432
-    to_port     = 5432
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Libera todos os IPs (apenas para desenvolvimento/entrevista)
-    description = "PostgreSQL access"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # SSH access (restrict to your IP in production)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # CHANGE THIS TO YOUR IP
+  }
+
+  # All outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -51,146 +159,157 @@ resource "aws_security_group" "rds" {
   }
 
   tags = {
-    Name = "caveo-rds-sg"
+    Name        = "caveo-api-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
   }
 }
 
-# ============================================
-# RDS POSTGRESQL
-# ============================================
-resource "aws_db_instance" "postgres" {
-  identifier     = "caveo-db"
-  engine         = "postgres"
-  engine_version = "15"  # ← Mudei de 15.4 para 15
-  instance_class = "db.t3.micro" # Free tier eligible
+# Get latest Ubuntu AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
 
-  allocated_storage = 20
-  storage_type      = "gp2"
-  storage_encrypted = false
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
 
-  db_name  = var.db_name
-  username = var.db_username
-  password = var.db_password
-
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  publicly_accessible    = true # Para facilitar acesso. Em produção, usar false!
-
-  skip_final_snapshot = true
-  backup_retention_period = 0 # Desabilitar backup para economizar
-
-  tags = {
-    Name = "caveo-postgres"
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
-# ============================================
-# COGNITO USER POOL - SEM VERIFICAÇÃO DE EMAIL
-# ============================================
-resource "aws_cognito_user_pool" "main" {
-  name = "caveo-user-pool-v2"
+# User data script for EC2 initialization
+locals {
+  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
+    aws_region = var.aws_region
+    git_repo   = var.git_repository_url
+  }))
+}
 
-  # ✅ Username é email, mas SEM verificação obrigatória
-  username_attributes = ["email"]
+# EC2 Key Pair (you need to create this beforehand)
+variable "key_pair_name" {
+  description = "Name of the EC2 Key Pair"
+  type        = string
+}
+
+variable "git_repository_url" {
+  description = "Git repository URL for the application"
+  type        = string
+}
+
+# EC2 Instance for Caveo API
+resource "aws_instance" "caveo_api" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name              = var.key_pair_name
+  iam_instance_profile  = aws_iam_instance_profile.caveo_ec2_profile.name
+  vpc_security_group_ids = [aws_security_group.caveo_api.id]
   
-  # ✅ CRÍTICO: Lista vazia = SEM verificação automática
-  auto_verified_attributes = []
-  
-  # MFA desabilitado
-  mfa_configuration = "OFF"
+  user_data = local.user_data
 
-  # Política de senha
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
-  }
-
-  # Atributos obrigatórios
-  schema {
-    name                = "email"
-    attribute_data_type = "String"
-    required            = true
-    mutable             = true
-  }
-
-  schema {
-    name                = "name"
-    attribute_data_type = "String"
-    required            = true
-    mutable             = true
-  }
-
-  # Configuração de email (necessário mesmo sem verificação)
-  email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"
-  }
-
-  # Configuração de recuperação de conta (via email, mas sem exigir verificação no cadastro)
-  account_recovery_setting {
-    recovery_mechanism {
-      name     = "verified_email"
-      priority = 1
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 20
+    encrypted   = true
+    
+    tags = {
+      Name = "caveo-api-root-${var.environment}"
     }
   }
 
   tags = {
-    Name         = "caveo-user-pool"
-    Verification = "disabled"
-    Version      = "v2"
+    Name        = "caveo-api-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+
+  # Wait for instance to be ready
+  provisioner "remote-exec" {
+    inline = [
+      "cloud-init status --wait"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+      host        = self.public_ip
+    }
   }
 }
 
-# ============================================
-# COGNITO USER POOL CLIENT
-# ============================================
-resource "aws_cognito_user_pool_client" "client" {
-  name         = "caveo-app-client-v2"
-  user_pool_id = aws_cognito_user_pool.main.id
+# Elastic IP for stable public IP
+resource "aws_eip" "caveo_api" {
+  instance = aws_instance.caveo_api.id
+  domain   = "vpc"
 
-  # Auth flows permitidos
-  explicit_auth_flows = [
-    "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_SRP_AUTH"
-  ]
-
-  # Validade dos tokens
-  access_token_validity  = 60
-  id_token_validity      = 60
-  refresh_token_validity = 30
-
-  token_validity_units {
-    access_token  = "minutes"
-    id_token      = "minutes"
-    refresh_token = "days"
+  tags = {
+    Name        = "caveo-api-eip-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
   }
 
-  # Public client (sem secret)
-  generate_secret = false
-
-  # ✅ Atributos (removido email_verified já que não verificamos)
-  read_attributes  = ["email", "name"]
-  write_attributes = ["email", "name"]
-
-  # Prevenir enumeração de usuários
-  prevent_user_existence_errors = "ENABLED"
+  depends_on = [aws_instance.caveo_api]
 }
 
-# ============================================
-# COGNITO USER GROUPS
-# ============================================
-resource "aws_cognito_user_group" "admin" {
-  name         = "admin"
-  user_pool_id = aws_cognito_user_pool.main.id
-  description  = "Admin users group"
-  precedence   = 1
+# Additional variables
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t3.small"
 }
 
-resource "aws_cognito_user_group" "user" {
-  name         = "user"
-  user_pool_id = aws_cognito_user_pool.main.id
-  description  = "Regular users group"
-  precedence   = 2
+variable "private_key_path" {
+  description = "Path to private key file for SSH"
+  type        = string
+}
+
+# Outputs
+output "secret_arn" {
+  description = "ARN of the Secrets Manager secret"
+  value       = aws_secretsmanager_secret.caveo_app_environment.arn
+}
+
+output "secret_name" {
+  description = "Name of the Secrets Manager secret"
+  value       = aws_secretsmanager_secret.caveo_app_environment.name
+}
+
+output "iam_instance_profile" {
+  description = "IAM instance profile for EC2"
+  value       = aws_iam_instance_profile.caveo_ec2_profile.name
+}
+
+output "security_group_id" {
+  description = "Security group ID for API instances"
+  value       = aws_security_group.caveo_api.id
+}
+
+output "ec2_public_ip" {
+  description = "Public IP address of the EC2 instance"
+  value       = aws_eip.caveo_api.public_ip
+}
+
+output "ec2_instance_id" {
+  description = "ID of the EC2 instance"
+  value       = aws_instance.caveo_api.id
+}
+
+output "api_url" {
+  description = "URL of the Caveo API"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000"
+}
+
+output "health_check_url" {
+  description = "Health check URL"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000/health"
+}
+
+output "api_docs_url" {
+  description = "API documentation URL"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000/docs"
 }

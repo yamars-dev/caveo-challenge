@@ -1,0 +1,22 @@
+# terraform/terraform.tfvars.example
+# Copy this file to terraform.tfvars and fill in your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "prod"
+
+# EC2 Configuration
+instance_type = "t3.small"
+key_pair_name = "your-key-pair-name"
+private_key_path = "~/path/to/your-private-key.pem"
+
+# Git Repository
+git_repository_url = "https://github.com/your-username/caveo.git"
+
+# Database configuration (your RDS endpoint)
+db_host = "caveo-db-prod.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
+db_password = "your-secure-database-password"
+
+# AWS Cognito configuration
+cognito_user_pool_id = "us-east-1_xxxxxxxxx"
+cognito_client_id = "your-cognito-client-id"
