@@ -1,0 +1,12 @@
+# Production configuration - uses AWS Secrets Manager
+mode: production
+
+# AWS Secrets Manager configuration
+secrets_manager:
+  enabled: true
+  region: ${AWS_REGION:-us-east-1}
+  secrets:
+    app: "caveo/app/environment"
+
+# Disable fallback to .env in production for security
+fallback_to_env: false
