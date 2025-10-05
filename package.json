@@ -7,7 +7,6 @@
     "dev": "NODE_ENV=development node --loader ts-node/esm --experimental-specifier-resolution=node --env-file=.env.local src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "create-admin": "node --loader ts-node/esm --experimental-specifier-resolution=node --env-file=.env.local scripts/create-admin.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
