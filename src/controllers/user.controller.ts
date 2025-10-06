@@ -1,11 +1,11 @@
 import { JsonController, Get, Post, Put, Delete, Body, Param, Ctx, UseBefore } from 'routing-controllers';
 import { UserEntity } from '../entities/user.entity.js';
 import { Context } from 'koa';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { roleMiddleware } from '../middlewares/role.middleware';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
+
 
 @JsonController('/users')
-@UseBefore(authMiddleware, roleMiddleware('admin')) 
+@UseBefore(authMiddleware)
 
 export class UsersController {
     @Get('/')
