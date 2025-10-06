@@ -12,4 +12,6 @@ terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/.terraform.lock.hcl
 terraform/terraform.tfvars
-.eslintcache
+.eslintcachedeploy.sh
+terraform/terraform.tfstate*
+terraform/terraform.tfvars*
