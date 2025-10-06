@@ -1,6 +1,3 @@
-# terraform/main.tf
-
-# Complete Caveo API Infrastructure
 terraform {
   required_providers {
     aws = {
@@ -15,7 +12,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Variables
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -49,7 +45,6 @@ variable "cognito_client_id" {
   type        = string
 }
 
-# Secrets Manager secret for application environment
 resource "aws_secretsmanager_secret" "caveo_app_environment" {
   name                    = "caveo/app/environment"
   description             = "Caveo API environment variables"
@@ -62,7 +57,6 @@ resource "aws_secretsmanager_secret" "caveo_app_environment" {
   }
 }
 
-# Secrets Manager secret version with actual values
 resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
   secret_id = aws_secretsmanager_secret.caveo_app_environment.id
   
@@ -80,7 +74,6 @@ resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
   })
 }
 
-# IAM role for EC2 instances
 resource "aws_iam_role" "caveo_ec2_role" {
   name = "caveo-ec2-role-${var.environment}"
 
@@ -103,7 +96,6 @@ resource "aws_iam_role" "caveo_ec2_role" {
   }
 }
 
-# IAM policy for Secrets Manager access
 resource "aws_iam_role_policy" "caveo_secrets_policy" {
   name = "caveo-secrets-policy-${var.environment}"
   role = aws_iam_role.caveo_ec2_role.id
@@ -123,18 +115,15 @@ resource "aws_iam_role_policy" "caveo_secrets_policy" {
   })
 }
 
-# Instance profile for EC2
 resource "aws_iam_instance_profile" "caveo_ec2_profile" {
   name = "caveo-ec2-profile-${var.environment}"
   role = aws_iam_role.caveo_ec2_role.name
 }
 
-# Security group for Caveo API
 resource "aws_security_group" "caveo_api" {
   name_prefix = "caveo-api-${var.environment}-"
   description = "Security group for Caveo API EC2 instances"
 
-  # HTTP traffic for API
   ingress {
     from_port   = 3000
     to_port     = 3000
@@ -142,15 +131,13 @@ resource "aws_security_group" "caveo_api" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH access (restrict to your IP in production)
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # CHANGE THIS TO YOUR IP
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # All outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -165,7 +152,6 @@ resource "aws_security_group" "caveo_api" {
   }
 }
 
-# Get latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -309,7 +295,34 @@ output "health_check_url" {
   value       = "http://${aws_eip.caveo_api.public_ip}:3000/health"
 }
 
+# Cognito User Groups for role-based access control
+resource "aws_cognito_user_group" "admin" {
+  count        = var.cognito_user_pool_id != "" ? 1 : 0
+  name         = "admin"
+  user_pool_id = var.cognito_user_pool_id
+  description  = "Administrator users with full system access"
+  precedence   = 1
+}
+
+resource "aws_cognito_user_group" "user" {
+  count        = var.cognito_user_pool_id != "" ? 1 : 0
+  name         = "user"
+  user_pool_id = var.cognito_user_pool_id
+  description  = "Regular users with limited access"
+  precedence   = 2
+}
+
 output "api_docs_url" {
   description = "API documentation URL"
   value       = "http://${aws_eip.caveo_api.public_ip}:3000/docs"
+}
+
+output "cognito_admin_group" {
+  description = "Cognito admin group name"
+  value       = var.cognito_user_pool_id != "" ? aws_cognito_user_group.admin[0].name : "admin"
+}
+
+output "cognito_user_group" {
+  description = "Cognito user group name"
+  value       = var.cognito_user_pool_id != "" ? aws_cognito_user_group.user[0].name : "user"
 }
