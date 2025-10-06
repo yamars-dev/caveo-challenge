@@ -58,7 +58,7 @@ describe('roleMiddleware', () => {
         error: 'Access denied',
         message: 'You do not have the required role(s) to access this resource.',
         requiredRoles: ['admin'],
-        yourRoles: 'user',
+        yourRoles: ['user'],
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -115,7 +115,7 @@ describe('roleMiddleware', () => {
       expect(mockContext.status).toBe(403);
       expect(mockContext.body).toMatchObject({
         requiredRoles: ['admin', 'moderator'],
-        yourRoles: 'viewer',
+        yourRoles: ['viewer'],
       });
     });
   });

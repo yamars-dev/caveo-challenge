@@ -2,7 +2,7 @@ import { Context, Next } from 'koa';
 
 export const roleMiddleware = (...requiredRoles: string[]) => {
     return async (ctx: Context, next: Next) => {
-        const userGroups = ctx.state.user?.groups[0] || [];
+        const userGroups = ctx.state.user?.groups || [];
 
         const hasRole = requiredRoles.some(role => userGroups.includes(role));
 
