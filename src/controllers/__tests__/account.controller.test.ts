@@ -107,12 +107,12 @@ describe('AccountController', () => {
 
       const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
 
-      expect(accountService.updateProfile).toHaveBeenCalledWith({
-        currentUserId: 'user-123',
-        isAdmin: false,
-        accessToken: 'mock-token',
-        data: updateDto,
-      });
+      expect(accountService.updateProfile).toHaveBeenCalledWith(
+        'user-123',
+        false,
+        'mock-token',
+        updateDto
+      );
       expect(result).toEqual({
         message: 'Profile updated successfully',
         user: mockUpdatedUser,
@@ -177,9 +177,10 @@ describe('AccountController', () => {
 
       expect(extractToken).toHaveBeenCalledWith('Bearer mock-token');
       expect(accountService.updateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: 'extracted-token',
-        })
+        'user-123',
+        false,
+        'extracted-token',
+        updateDto
       );
     });
   });
@@ -208,12 +209,12 @@ describe('AccountController', () => {
 
       const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
 
-      expect(accountService.updateProfile).toHaveBeenCalledWith({
-        currentUserId: 'user-123',
-        isAdmin: true,
-        accessToken: 'mock-token',
-        data: updateDto,
-      });
+      expect(accountService.updateProfile).toHaveBeenCalledWith(
+        'user-123',
+        true,
+        'mock-token',
+        updateDto
+      );
       expect(result).toEqual({
         message: 'Profile updated successfully',
         user: mockUpdatedUser,
@@ -286,31 +287,7 @@ describe('AccountController', () => {
       });
     });
 
-    it('should pass isAdmin flag correctly to service', async () => {
-      const updateDto: UpdateProfileDto = {
-        userId: 'other-user-456',
-        name: 'Updated',
-      };
 
-      const mockUpdatedUser: UserProfileResponse = {
-        id: 'other-user-456',
-        email: 'other@example.com',
-        name: 'Updated',
-        role: 'user',
-        isOnboarded: true,
-      };
-
-      (extractToken as jest.Mock).mockReturnValue('mock-token');
-      (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
-
-      await controller.editAccount(updateDto, mockContext as Context);
-
-      expect(accountService.updateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isAdmin: true,
-        })
-      );
-    });
   });
 
   describe('PUT /account/edit - Error Handling', () => {
@@ -446,9 +423,10 @@ describe('AccountController', () => {
 
       expect(extractToken).toHaveBeenCalledWith(undefined);
       expect(accountService.updateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: '',
-        })
+        'user-123',
+        false,
+        '',
+        updateDto
       );
     });
 
@@ -474,9 +452,10 @@ describe('AccountController', () => {
 
       expect(extractToken).toHaveBeenCalledWith('InvalidFormat');
       expect(accountService.updateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: '',
-        })
+        'user-123',
+        false,
+        '',
+        updateDto
       );
     });
   });

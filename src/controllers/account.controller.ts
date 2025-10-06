@@ -115,16 +115,16 @@ export class AccountController {
     }
 
     try {
-      const isAdmin = user.groups?.includes('admin');
       const authHeader = ctx.headers['authorization'];
       const accessToken = extractToken(authHeader) || '';
 
-      const updatedUser: UserProfileResponse = await accountService.updateProfile({
-        currentUserId: user.id,
+      const isAdmin = user.groups?.includes('admin');
+      const updatedUser: UserProfileResponse = await accountService.updateProfile(
+        user.id,
         isAdmin,
         accessToken,
-        data,
-      });
+        data
+      );
 
       return {
         message: 'Profile updated successfully',
