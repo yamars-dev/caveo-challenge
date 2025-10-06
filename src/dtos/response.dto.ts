@@ -1,12 +1,8 @@
+import { UserProfileResponse } from './account.dto.js';
+
 export interface AuthResponseDto {
   message: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: 'user' | 'admin';
-    isOnboarded: boolean;
-  };
+  user: UserProfileResponse;
   tokens: {
     AccessToken: string;
     IdToken: string;
@@ -27,13 +23,7 @@ export interface GetProfileResponseDto {
 
 export interface EditProfileResponseDto {
   message: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: 'user' | 'admin';
-    isOnboarded: boolean;
-  };
+  user: UserProfileResponse;
 }
 
 export interface ErrorResponseDto {
