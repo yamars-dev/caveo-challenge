@@ -12,40 +12,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-  default     = "prod"
-}
-
-variable "db_host" {
-  description = "Database host (RDS endpoint) - Leave empty to use Terraform-managed RDS"
-  type        = string
-  default     = ""
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
-}
-
-variable "cognito_user_pool_id" {
-  description = "Cognito User Pool ID"
-  type        = string
-}
-
-variable "cognito_client_id" {
-  description = "Cognito Client ID"
-  type        = string
-}
-
 resource "aws_secretsmanager_secret" "caveo_app_environment" {
   name                    = "caveo/app/environment"
   description             = "Caveo API environment variables"
@@ -150,13 +116,15 @@ resource "aws_security_group" "caveo_api" {
     to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "API access from anywhere (use ALB with HTTPS in production)"
   }
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.admin_ip != "" ? [var.admin_ip] : ["0.0.0.0/0"]
+    description = var.admin_ip != "" ? "SSH access from admin IP only" : "SSH access from anywhere (INSECURE - set admin_ip variable)"
   }
 
   egress {
@@ -283,16 +251,7 @@ locals {
   }))
 }
 
-# EC2 Key Pair (you need to create this beforehand)
-variable "key_pair_name" {
-  description = "Name of the EC2 Key Pair"
-  type        = string
-}
-
-variable "git_repository_url" {
-  description = "Git repository URL for the application"
-  type        = string
-}
+# EC2 Key Pair and git repository variables are declared in variables.tf
 
 # EC2 Instance for Caveo API
 resource "aws_instance" "caveo_api" {
@@ -350,17 +309,7 @@ resource "aws_eip" "caveo_api" {
   depends_on = [aws_instance.caveo_api]
 }
 
-# Additional variables
-variable "instance_type" {
-  description = "EC2 instance type"
-  type        = string
-  default     = "t3.small"
-}
-
-variable "private_key_path" {
-  description = "Path to private key file for SSH"
-  type        = string
-}
+# Additional variables are declared in variables.tf
 
 # Outputs
 output "secret_arn" {
@@ -383,10 +332,7 @@ output "security_group_id" {
   value       = aws_security_group.caveo_api.id
 }
 
-output "ec2_public_ip" {
-  description = "Public IP address of the EC2 instance"
-  value       = aws_eip.caveo_api.public_ip
-}
+// ec2_public_ip output is declared later in outputs (variables.tf handles variable declarations)
 
 output "ec2_instance_id" {
   description = "ID of the EC2 instance"
@@ -444,6 +390,156 @@ output "ecr_registry_id" {
   description = "ECR Registry ID"
   value       = aws_ecrpublic_repository.caveo_api.registry_id
 }
+# ===========================
+# CloudWatch Monitoring
+# ===========================
+
+# SNS Topic for RDS Alerts
+resource "aws_sns_topic" "rds_alerts" {
+  name = "caveo-rds-alerts-${var.environment}"
+
+  tags = {
+    Name        = "caveo-rds-alerts-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# SNS Topic Subscription (email)
+resource "aws_sns_topic_subscription" "rds_alerts_email" {
+  topic_arn = aws_sns_topic.rds_alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
+# CloudWatch Alarm - RDS CPU Utilization
+resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
+  alarm_name          = "caveo-rds-cpu-high-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = "300" # 5 minutes
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors RDS CPU utilization"
+  alarm_actions       = [aws_sns_topic.rds_alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.caveo.id
+  }
+
+  tags = {
+    Name        = "caveo-rds-cpu-alarm-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# CloudWatch Alarm - RDS Free Storage Space
+resource "aws_cloudwatch_metric_alarm" "rds_storage_low" {
+  alarm_name          = "caveo-rds-storage-low-${var.environment}"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "FreeStorageSpace"
+  namespace           = "AWS/RDS"
+  period              = "300" # 5 minutes
+  statistic           = "Average"
+  threshold           = "2000000000" # 2GB in bytes
+  alarm_description   = "This metric monitors RDS free storage space"
+  alarm_actions       = [aws_sns_topic.rds_alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.caveo.id
+  }
+
+  tags = {
+    Name        = "caveo-rds-storage-alarm-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# CloudWatch Alarm - RDS Database Connections
+resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
+  alarm_name          = "caveo-rds-connections-high-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "DatabaseConnections"
+  namespace           = "AWS/RDS"
+  period              = "300" # 5 minutes
+  statistic           = "Average"
+  threshold           = "80" # 80% of max connections for t3.micro
+  alarm_description   = "This metric monitors RDS database connections"
+  alarm_actions       = [aws_sns_topic.rds_alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.caveo.id
+  }
+
+  tags = {
+    Name        = "caveo-rds-connections-alarm-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# CloudWatch Alarm - RDS Read Latency
+resource "aws_cloudwatch_metric_alarm" "rds_read_latency_high" {
+  alarm_name          = "caveo-rds-read-latency-high-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ReadLatency"
+  namespace           = "AWS/RDS"
+  period              = "300" # 5 minutes
+  statistic           = "Average"
+  threshold           = "0.1" # 100ms
+  alarm_description   = "This metric monitors RDS read latency"
+  alarm_actions       = [aws_sns_topic.rds_alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.caveo.id
+  }
+
+  tags = {
+    Name        = "caveo-rds-read-latency-alarm-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# CloudWatch Alarm - RDS Write Latency
+resource "aws_cloudwatch_metric_alarm" "rds_write_latency_high" {
+  alarm_name          = "caveo-rds-write-latency-high-${var.environment}"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "WriteLatency"
+  namespace           = "AWS/RDS"
+  period              = "300" # 5 minutes
+  statistic           = "Average"
+  threshold           = "0.1" # 100ms
+  alarm_description   = "This metric monitors RDS write latency"
+  alarm_actions       = [aws_sns_topic.rds_alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.caveo.id
+  }
+
+  tags = {
+    Name        = "caveo-rds-write-latency-alarm-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# ===========================
+# Outputs
+# ===========================
+
+output "ec2_public_ip" {
+  description = "Public IP of the EC2 instance"
+  value       = aws_instance.caveo_api.public_ip
+}
 
 output "rds_endpoint" {
   description = "RDS PostgreSQL endpoint"
@@ -464,4 +560,20 @@ output "rds_username" {
   description = "RDS master username"
   value       = aws_db_instance.caveo.username
   sensitive   = true
+}
+
+output "sns_topic_arn" {
+  description = "SNS topic ARN for RDS alerts"
+  value       = aws_sns_topic.rds_alerts.arn
+}
+
+output "cloudwatch_alarms" {
+  description = "CloudWatch alarm names for RDS monitoring"
+  value = {
+    cpu_high         = aws_cloudwatch_metric_alarm.rds_cpu_high.alarm_name
+    storage_low      = aws_cloudwatch_metric_alarm.rds_storage_low.alarm_name
+    connections_high = aws_cloudwatch_metric_alarm.rds_connections_high.alarm_name
+    read_latency     = aws_cloudwatch_metric_alarm.rds_read_latency_high.alarm_name
+    write_latency    = aws_cloudwatch_metric_alarm.rds_write_latency_high.alarm_name
+  }
 }

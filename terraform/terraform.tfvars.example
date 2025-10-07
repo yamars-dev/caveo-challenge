@@ -1,3 +1,16 @@
+aws_region           = "us-east-1"
+db_name              = "caveo_db"
+db_username          = "postgres"
+# db_password should be provided via Secrets Manager or CI secrets
+# db_password          = "<REDACTED>"
+cognito_user_pool_id = "us-east-1_xxxxx"
+cognito_client_id    = "xxxxxxxxxxxxxxxxxxxxxxxx"
+git_repository_url   = "https://github.com/your/repo.git"
+key_pair_name        = "your-key-name"
+private_key_path     = "~/.ssh/your-key.pem"
+instance_type        = "t3.micro"
+# Optional
+# alert_email          = "you@example.com"
 # terraform/terraform.tfvars.example
 # Copy this file to terraform.tfvars and fill in your values
 
