@@ -165,7 +165,7 @@ jobs:
         for i in {1..12}; do
           if curl -f http://localhost:3000/health; then
             echo "[deploy] Health check passed"
-            docker image prune -f
+            docker image prune -f || true
             exit 0
           fi
           sleep 5
@@ -176,4 +176,6 @@ jobs:
         exit 1
         ENDSSH
         
+        EXIT_CODE=$?
         rm -f private_key.pem
+        exit $EXIT_CODE

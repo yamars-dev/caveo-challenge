@@ -1,32 +1,70 @@
+import { IsString, IsNumber, IsObject, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { UserProfileResponse } from './account.dto.js';
 
-export interface AuthResponseDto {
-  message: string;
-  user: UserProfileResponse;
-  tokens: {
-    AccessToken: string;
-    IdToken: string;
-    RefreshToken: string;
-    ExpiresIn: number;
-  };
+export class TokensDto {
+  @IsString()
+  AccessToken!: string;
+
+  @IsString()
+  IdToken!: string;
+
+  @IsString()
+  RefreshToken!: string;
+
+  @IsNumber()
+  ExpiresIn!: number;
 }
 
-export interface GetProfileResponseDto {
-  id: string;
-  email: string;
-  name: string;
-  groups: string;
-  tokenUse: string;
-  authTime: number;
-  exp: number;
+export class AuthResponseDto {
+  @IsString()
+  message!: string;
+
+  @ValidateNested()
+  @Type(() => UserProfileResponse)
+  user!: UserProfileResponse;
+
+  @ValidateNested()
+  @Type(() => TokensDto)
+  tokens!: TokensDto;
 }
 
-export interface EditProfileResponseDto {
-  message: string;
-  user: UserProfileResponse;
+export class GetProfileResponseDto {
+  @IsString()
+  id!: string;
+
+  @IsString()
+  email!: string;
+
+  @IsString()
+  name!: string;
+
+  @IsString()
+  groups!: string;
+
+  @IsString()
+  tokenUse!: string;
+
+  @IsNumber()
+  authTime!: number;
+
+  @IsNumber()
+  exp!: number;
 }
 
-export interface ErrorResponseDto {
-  error: string;
-  message: string;
+export class EditProfileResponseDto {
+  @IsString()
+  message!: string;
+
+  @ValidateNested()
+  @Type(() => UserProfileResponse)
+  user!: UserProfileResponse;
+}
+
+export class ErrorResponseDto {
+  @IsString()
+  error!: string;
+
+  @IsString()
+  message!: string;
 }
