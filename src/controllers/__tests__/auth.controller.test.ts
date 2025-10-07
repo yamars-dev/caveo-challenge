@@ -19,6 +19,10 @@ describe('AuthController', () => {
         error: jest.fn(),
       } as any,
       status: 200,
+      cookies: {
+        set: jest.fn(),
+        get: jest.fn(),
+      } as any,
     };
     jest.clearAllMocks();
   });
@@ -188,7 +192,11 @@ describe('AuthController', () => {
       );
 
       expect(mockContext.log?.error).toHaveBeenCalledWith(
-        { err: mockError, email: signInDto.email },
+        {
+          errorMessage: mockError.message,
+          errorCode: undefined,
+          email: signInDto.email,
+        },
         'Authentication failed'
       );
       expect(mockContext.log?.info).toHaveBeenCalledWith(
