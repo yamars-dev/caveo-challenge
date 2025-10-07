@@ -26,7 +26,16 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          node-${{ runner.os }}-
+    - name: Install deps (clean)
       run: npm ci
+    - name: TypeScript type check
+      run: npx tsc --noEmit
     
     - name: Run ESLint
       run: npm run lint
@@ -46,6 +55,13 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          node-${{ runner.os }}-
+    - name: Install deps (clean)
       run: npm ci
     
     - name: Run tests
@@ -70,6 +86,13 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          node-${{ runner.os }}-
+    - name: Install deps (clean)
       run: npm ci
     
     - name: Build TypeScript
@@ -101,7 +124,7 @@ jobs:
     - name: Build and push Docker image
       run: |
         # Build image
-        docker build -t $REGISTRY/$IMAGE_NAME:latest -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+  docker build --pull -t $REGISTRY/$IMAGE_NAME:latest -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
         
         # Push images
         docker push $REGISTRY/$IMAGE_NAME:latest
@@ -125,7 +148,8 @@ jobs:
             exit 1
           fi
 
-          printf '%s' "$SECRET_JSON" | jq -r 'fromjson | to_entries[] | "\(.key)=\(.value)"' > /home/ubuntu/.env.tmp
+          # Handle case where SecretString comes already as JSON object or as a JSON string
+          printf '%s' "$SECRET_JSON" | jq -r '(if type=="string" then (fromjson) else . end) | to_entries[] | "\(.key)=\(.value)"' > /home/ubuntu/.env.tmp
           mv /home/ubuntu/.env.tmp /home/ubuntu/.env
           chmod 600 /home/ubuntu/.env
           echo '[deploy] .env generated'
@@ -147,6 +171,13 @@ jobs:
 
           echo '[deploy] Container status:'
           docker ps --filter name=caveo-api --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+          echo '[deploy] Waiting for health endpoint'
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then echo '[deploy] Health check OK'; break; fi; sleep 2;
+            if [ "$i" -eq 15 ]; then echo '[deploy][error] Health check failed'; exit 1; fi;
+          done
+          echo '[deploy] Pruning dangling images'
+          docker image prune -f >/dev/null 2>&1 || true
         REMOTE_SCRIPT
         
         rm -f private_key.pem
