@@ -193,6 +193,9 @@ The API is documented with Swagger/OpenAPI and available at `/docs` when running
 - `GET /api/account/me` - Get current user account information
 - `PUT /api/account/edit` - Update account information
 
+#### User Management (Admin Only)
+- `GET /api/users` - List all users (requires admin role)
+
 #### Documentation
 - `GET /docs` - Swagger UI interface
 - `GET /api-docs.json` - OpenAPI specification
@@ -229,18 +232,7 @@ The API is documented with Swagger/OpenAPI and available at `/docs` when running
   - Inbound: HTTP, HTTPS, SSH, API port
   - VPC isolated
 
-## Migration from Manual Deployment
-
-This project previously used multiple deployment strategies (scripts, docker-compose files, manual commands). The new CI/CD pipeline consolidates everything into a single, automated workflow.
-
-Benefits of the new approach:
-- ✅ Tests run automatically before deployment
-- ✅ Consistent deployment process
-- ✅ Zero-downtime deployments
-- ✅ Rollback capabilities
-- ✅ Infrastructure and application deployment unified
-
-## ⚡ Quick Test
+## Quick Test
 
 Test the deployed API:
 
@@ -285,17 +277,6 @@ npm audit fix
 ```
 
 **Current Status**: 0 vulnerabilities
-
-## Troubleshooting
-
-**ECR push fails**
-```bash
-# Login to ECR (use your region)
-aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-
-# Verify repository exists
-aws ecr-public describe-repositories --region us-east-1
-```
 
 ## Support
 
