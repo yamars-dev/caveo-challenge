@@ -6,6 +6,7 @@ import {
   UpdateUserAttributesCommand,
   AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 import { logger, maskEmail } from '../helpers/logger.js';
 
 /**
@@ -14,9 +15,8 @@ import { logger, maskEmail } from '../helpers/logger.js';
  */
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION || 'us-east-1',
-  requestHandler: {
-    requestTimeout: 10000, // 10 seconds timeout
-  },
+  // Use NodeHttpHandler with socketTimeout to ensure requests respect timeouts
+  requestHandler: new NodeHttpHandler({ socketTimeout: 10000 }), // 10s
   maxAttempts: 3, // Retry up to 3 times on network errors
 });
 
