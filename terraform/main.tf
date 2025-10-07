@@ -25,8 +25,9 @@ variable "environment" {
 }
 
 variable "db_host" {
-  description = "Database host (RDS endpoint)"
+  description = "Database host (RDS endpoint) - Leave empty to use Terraform-managed RDS"
   type        = string
+  default     = ""
 }
 
 variable "db_password" {
@@ -63,11 +64,11 @@ resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
   secret_string = jsonencode({
     NODE_ENV            = "production"
     PORT                = "3000"
-    DB_HOST             = var.db_host
+    DB_HOST             = var.db_host != "" ? var.db_host : aws_db_instance.caveo.address
     DB_PORT             = "5432"
-    DB_USERNAME         = "caveo_user"
+    DB_USERNAME         = "caveo_admin"
     DB_PASSWORD         = var.db_password
-    DB_DATABASE         = "caveo_db"
+    DB_DATABASE         = "caveo"
     AWS_REGION          = var.aws_region
     COGNITO_USER_POOL_ID = var.cognito_user_pool_id
     COGNITO_CLIENT_ID   = var.cognito_client_id
@@ -167,6 +168,93 @@ resource "aws_security_group" "caveo_api" {
 
   tags = {
     Name        = "caveo-api-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# Security Group for RDS
+resource "aws_security_group" "caveo_rds" {
+  name_prefix = "caveo-rds-${var.environment}-"
+  description = "Security group for Caveo RDS PostgreSQL"
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.caveo_api.id]
+    description     = "PostgreSQL access from API EC2"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "caveo-rds-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# DB Subnet Group for RDS
+resource "aws_db_subnet_group" "caveo" {
+  name       = "caveo-db-subnet-${var.environment}"
+  subnet_ids = data.aws_subnets.default.ids
+
+  tags = {
+    Name        = "caveo-db-subnet-${var.environment}"
+    Application = "caveo-api"
+    Environment = var.environment
+  }
+}
+
+# Get default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get default subnets
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# RDS PostgreSQL Instance
+resource "aws_db_instance" "caveo" {
+  identifier     = "caveo-db-${var.environment}"
+  engine         = "postgres"
+  engine_version = "16.4"
+  instance_class = "db.t3.micro"
+
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp3"
+  storage_encrypted     = true
+
+  db_name  = "caveo"
+  username = "caveo_admin"
+  password = var.db_password
+
+  db_subnet_group_name   = aws_db_subnet_group.caveo.name
+  vpc_security_group_ids = [aws_security_group.caveo_rds.id]
+
+  backup_retention_period = 7
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "mon:04:00-mon:05:00"
+
+  skip_final_snapshot       = var.environment != "prod"
+  final_snapshot_identifier = var.environment == "prod" ? "caveo-db-final-${var.environment}-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
+
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+
+  tags = {
+    Name        = "caveo-db-${var.environment}"
     Application = "caveo-api"
     Environment = var.environment
   }
@@ -355,4 +443,25 @@ output "ecr_repository_uri" {
 output "ecr_registry_id" {
   description = "ECR Registry ID"
   value       = aws_ecrpublic_repository.caveo_api.registry_id
+}
+
+output "rds_endpoint" {
+  description = "RDS PostgreSQL endpoint"
+  value       = aws_db_instance.caveo.address
+}
+
+output "rds_port" {
+  description = "RDS PostgreSQL port"
+  value       = aws_db_instance.caveo.port
+}
+
+output "rds_database_name" {
+  description = "RDS database name"
+  value       = aws_db_instance.caveo.db_name
+}
+
+output "rds_username" {
+  description = "RDS master username"
+  value       = aws_db_instance.caveo.username
+  sensitive   = true
 }
