@@ -79,7 +79,10 @@ export class AuthController {
         isOnboarded: result.user.isOnboarded,
       };
 
-      log.info({ userId: result.user.id, isNewUser: result.isNewUser }, 'Authentication successful');
+      log.info(
+        { userId: result.user.id, isNewUser: result.isNewUser },
+        'Authentication successful'
+      );
 
       return {
         message: result.isNewUser ? 'Registration successful' : 'Login successful',
@@ -92,7 +95,10 @@ export class AuthController {
         },
       };
     } catch (error: any) {
-      log.error({ errorMessage: error.message, errorCode: error.code, email: data.email }, 'Authentication failed');
+      log.error(
+        { errorMessage: error.message, errorCode: error.code, email: data.email },
+        'Authentication failed'
+      );
       throw new BadRequestError(error.message || 'Authentication failed');
     }
   }

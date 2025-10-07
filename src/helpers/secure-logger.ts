@@ -1,4 +1,3 @@
-
 import logger from './logger.js';
 
 function isPlainObject(v: any) {

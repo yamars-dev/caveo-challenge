@@ -22,9 +22,9 @@ export const corsMiddleware = cors({
     }
 
     // Development: allow localhost fallback so local UI works without extra config.
-  if (!origin) return 'http://localhost:3000';
-  if (allowedOrigins.includes('*')) return origin;
-  return allowedOrigins.includes(origin) ? origin : 'http://localhost:3000';
+    if (!origin) return 'http://localhost:3000';
+    if (allowedOrigins.includes('*')) return origin;
+    return allowedOrigins.includes(origin) ? origin : 'http://localhost:3000';
   },
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

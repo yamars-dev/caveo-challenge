@@ -1,4 +1,3 @@
-
 import jwt from 'jsonwebtoken';
 import { JwksClient } from 'jwks-rsa';
 
@@ -10,7 +9,7 @@ const JWKS_URI = `https://cognito-idp.${REGION}.amazonaws.com/${USER_POOL_ID}/.w
 const jwksClient = new JwksClient({
   jwksUri: JWKS_URI,
   cache: true,
-  cacheMaxAge: 600000
+  cacheMaxAge: 600000,
 });
 
 function getSigningKey(header: jwt.JwtHeader): Promise<string> {

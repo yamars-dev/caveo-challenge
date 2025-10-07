@@ -46,8 +46,6 @@ export class AccountService {
       throw new Error('You do not have permission to change roles');
     }
 
-
-
     if (isAdmin && data.role) {
       if (targetUserId === currentUserId && data.role === 'user') {
         throw new Error('You cannot demote yourself from admin');

@@ -1,4 +1,12 @@
-import { JsonController, Get, Put, Body, Ctx, Authorized, BadRequestError } from 'routing-controllers';
+import {
+  JsonController,
+  Get,
+  Put,
+  Body,
+  Ctx,
+  Authorized,
+  BadRequestError,
+} from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
@@ -116,7 +124,8 @@ export class AccountController {
   ): Promise<EditProfileResponseDto | ErrorResponseDto> {
     const user = ctx.state.user;
     const rawLog = (ctx as any).log || logger;
-    const log = (typeof rawLog.info === 'function' && typeof rawLog.error === 'function') ? rawLog : logger;
+    const log =
+      typeof rawLog.info === 'function' && typeof rawLog.error === 'function' ? rawLog : logger;
 
     if (!user) {
       ctx.status = 401;

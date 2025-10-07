@@ -132,7 +132,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('You do not have permission to change roles');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'You do not have permission to change roles'
+      );
     });
 
     it('should not allow user to edit another user profile', async () => {
@@ -145,7 +147,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('You can only edit your own profile');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'You can only edit your own profile'
+      );
     });
 
     it('should extract token from authorization header', async () => {
@@ -278,7 +282,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('You cannot demote yourself from admin');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'You cannot demote yourself from admin'
+      );
     });
   });
 
@@ -311,7 +317,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('User not found');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'User not found'
+      );
     });
 
     it('should return 403 for permission errors', async () => {
@@ -323,7 +331,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('You do not have permission to change roles');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'You do not have permission to change roles'
+      );
     });
 
     it('should return 500 for unexpected errors', async () => {
@@ -335,7 +345,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('Database connection failed');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'Database connection failed'
+      );
     });
 
     it('should log errors when update fails', async () => {
@@ -367,7 +379,9 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow('Failed to update profile');
+      await expect(controller.editAccount(updateDto, mockContext as Context)).rejects.toThrow(
+        'Failed to update profile'
+      );
     });
   });
 

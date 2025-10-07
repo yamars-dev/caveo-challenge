@@ -4,7 +4,6 @@ import { SignInOrRegisterDto } from '../../dtos/auth.dto.js';
 import { AuthResponseDto } from '../../dtos/response.dto.js';
 import { Context } from 'koa';
 
-
 // Mock dependencies
 jest.mock('../../services/auth.service.js');
 
@@ -98,10 +97,10 @@ describe('AuthController', () => {
 
       (authService.signInOrRegister as jest.Mock).mockResolvedValue(mockServiceResponse);
 
-  const result = await controller.signInOrRegister(signInDto, mockContext as Context);
-  expect(result).toBeDefined();
-  expect(result!.user.name).toBe('');
-  expect(result!.user.isOnboarded).toBe(false);
+      const result = await controller.signInOrRegister(signInDto, mockContext as Context);
+      expect(result).toBeDefined();
+      expect(result!.user.name).toBe('');
+      expect(result!.user.isOnboarded).toBe(false);
     });
   });
 
@@ -190,7 +189,9 @@ describe('AuthController', () => {
       const mockError = new Error('Invalid credentials');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('Invalid credentials');
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
+        'Invalid credentials'
+      );
 
       expect(mockContext.log?.error).toHaveBeenCalledWith(
         {
@@ -207,19 +208,23 @@ describe('AuthController', () => {
     });
 
     it('should handle different error types', async () => {
-  const mockError = new Error('UserNotFoundException');
-  (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
+      const mockError = new Error('UserNotFoundException');
+      (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-  await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('UserNotFoundException');
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
+        'UserNotFoundException'
+      );
 
-  expect(mockContext.log?.error).toHaveBeenCalled();
+      expect(mockContext.log?.error).toHaveBeenCalled();
     });
 
     it('should log authentication attempt even when it fails', async () => {
       const mockError = new Error('Authentication failed');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('Authentication failed');
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
+        'Authentication failed'
+      );
 
       expect(mockContext.log?.info).toHaveBeenCalledWith(
         { email: signInDto.email },
@@ -256,21 +261,21 @@ describe('AuthController', () => {
 
       (authService.signInOrRegister as jest.Mock).mockResolvedValue(mockAuthResponse);
 
-  const result = await controller.signInOrRegister(signInDto, mockContext as Context);
-  expect(result).toBeDefined();
-  expect(result).toHaveProperty('message');
-  expect(result).toHaveProperty('user');
-  expect(result).toHaveProperty('tokens');
-  expect(result!.user).toHaveProperty('id');
-  expect(result!.user).toHaveProperty('email');
-  expect(result!.user).toHaveProperty('name');
-  expect(result!.user).toHaveProperty('role');
-  expect(result!.user).toHaveProperty('isOnboarded');
-  expect(result!.tokens).toHaveProperty('AccessToken');
-  expect(result!.tokens).toHaveProperty('IdToken');
-  expect(result!.tokens).toHaveProperty('RefreshToken');
-  expect(result!.tokens).toHaveProperty('ExpiresIn');
-  expect(result!.user.role).toBe('admin');
+      const result = await controller.signInOrRegister(signInDto, mockContext as Context);
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('message');
+      expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('tokens');
+      expect(result!.user).toHaveProperty('id');
+      expect(result!.user).toHaveProperty('email');
+      expect(result!.user).toHaveProperty('name');
+      expect(result!.user).toHaveProperty('role');
+      expect(result!.user).toHaveProperty('isOnboarded');
+      expect(result!.tokens).toHaveProperty('AccessToken');
+      expect(result!.tokens).toHaveProperty('IdToken');
+      expect(result!.tokens).toHaveProperty('RefreshToken');
+      expect(result!.tokens).toHaveProperty('ExpiresIn');
+      expect(result!.user.role).toBe('admin');
     });
   });
 });

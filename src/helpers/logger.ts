@@ -7,7 +7,6 @@ const isProduction = process.env.NODE_ENV === 'production';
  * Mask an email for safe logging. Example: user@example.com -> u***@example.com
  */
 
-
 export const logger = pino({
   // In production, use 'warn' by default to reduce log volume
   // In development, use 'debug' for more verbose output

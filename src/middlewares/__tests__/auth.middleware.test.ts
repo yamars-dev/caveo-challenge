@@ -75,8 +75,6 @@ describe('authMiddleware', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
-
-
     it('should handle user without groups', async () => {
       const mockToken = 'valid-token';
       const mockDecoded = {

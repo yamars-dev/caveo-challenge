@@ -56,8 +56,13 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 
   // Additional sanity checks: ensure Cognito env vars are not left as placeholders
   const placeholderPattern = /\<.+\>|TODO|REPLACE_ME|<REPLACE>/i;
-  if (placeholderPattern.test(process.env.COGNITO_CLIENT_ID || '') || placeholderPattern.test(process.env.COGNITO_USER_POOL_ID || '')) {
-    throw new Error('Cognito environment variables appear to be placeholders; please set real values for COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID');
+  if (
+    placeholderPattern.test(process.env.COGNITO_CLIENT_ID || '') ||
+    placeholderPattern.test(process.env.COGNITO_USER_POOL_ID || '')
+  ) {
+    throw new Error(
+      'Cognito environment variables appear to be placeholders; please set real values for COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID'
+    );
   }
 
   return {
@@ -88,13 +93,13 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 export function validateEnvironment(): void {
   try {
     getEnvironmentConfig();
-  // Use structured logger instead of console to avoid leaking sensitive info
-  // Logger is dynamically imported to avoid circular dependencies during bootstrap
-  const { default: logger } = require('../helpers/logger.js');
-  logger.info('Environment configuration is valid', { config: getSafeConfig() });
+    // Use structured logger instead of console to avoid leaking sensitive info
+    // Logger is dynamically imported to avoid circular dependencies during bootstrap
+    const { default: logger } = require('../helpers/logger.js');
+    logger.info('Environment configuration is valid', { config: getSafeConfig() });
   } catch (error) {
-  const { default: logger } = require('../helpers/logger.js');
-  logger.error('Environment configuration error', { err: String(error) });
+    const { default: logger } = require('../helpers/logger.js');
+    logger.error('Environment configuration error', { err: String(error) });
     process.exit(1);
   }
 }
