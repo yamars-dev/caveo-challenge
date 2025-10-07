@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { parse } from 'yaml';
 import { config as dotenvConfig } from 'dotenv';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 import { logger } from '../helpers/logger.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -49,7 +50,10 @@ function loadConfig(): Config {
 }
 
 async function loadFromSecretsManager(config: Config): Promise<void> {
-  const client = new SecretsManagerClient({ region: config.secrets_manager.region });
+  const client = new SecretsManagerClient({
+    region: config.secrets_manager.region,
+    requestHandler: new NodeHttpHandler({ socketTimeout: 10000 }),
+  });
 
   try {
     logger.info('Loading environment from AWS Secrets Manager');
