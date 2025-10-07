@@ -46,10 +46,7 @@ export class AccountService {
       throw new Error('You do not have permission to change roles');
     }
 
-    if (data.name) {
-      dbUser.name = data.name;
-      dbUser.isOnboarded = true;
-    }
+
 
     if (isAdmin && data.role) {
       if (targetUserId === currentUserId && data.role === 'user') {
@@ -57,26 +54,33 @@ export class AccountService {
       }
       dbUser.role = data.role;
 
-      cognitoService
+      await cognitoService
         .addToGroup(dbUser.email, data.role)
         .catch((error) =>
           logger.warn({ error, userId: dbUser.id, role: data.role }, 'Cognito group sync failed')
         );
     }
 
-    await userRepo.save(dbUser);
-
+    let updated: any;
     if (data.name && accessToken) {
-      cognitoService
+      updated = await cognitoService
         .updateUserAttributes(accessToken, { name: data.name })
-        .catch((error) =>
-          logger.warn({ error, userId: dbUser.id }, 'Cognito attributes sync failed')
-        );
+        .then((result) => !!result)
+        .catch((error) => {
+          logger.warn({ error, userId: dbUser.id }, 'Cognito attributes sync failed');
+          return false;
+        });
     }
+    if (data.name !== undefined) {
+      dbUser.name = data.name;
+      dbUser.isOnboarded = true;
+    }
+
+    const response = updated ? await userRepo.save(dbUser) : dbUser;
 
     logger.info({ userId: dbUser.id, changes: Object.keys(data) }, 'Profile updated');
 
-    return this.mapToResponse(dbUser);
+    return this.mapToResponse(response);
   }
 
   private mapToResponse(user: UserEntity): UserProfileResponse {
