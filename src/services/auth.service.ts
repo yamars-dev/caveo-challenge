@@ -1,6 +1,6 @@
-import { AppDataSource } from '../entities';
-import { UserEntity } from '../entities/user.entity';
-import { cognitoService } from './cognito.service';
+import { AppDataSource } from '../entities/index.js';
+import { UserEntity } from '../entities/user.entity.js';
+import { cognitoService } from './cognito.service.js';
 
 export class AuthService {
 

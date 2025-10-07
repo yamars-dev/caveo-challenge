@@ -1,7 +1,7 @@
-import { AuthService } from '../auth.service';
-import { cognitoService } from '../cognito.service';
-import { AppDataSource } from '../../entities';
-import { UserEntity } from '../../entities/user.entity';
+import { AuthService } from '../auth.service.js';
+import { cognitoService } from '../cognito.service.js';
+import { AppDataSource } from '../../entities/index.js';
+import { UserEntity } from '../../entities/user.entity.js';
 
 jest.mock('../cognito.service');
 jest.mock('../../entities');

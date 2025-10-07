@@ -1,10 +1,10 @@
 import { JsonController, Post, Body, HttpCode, Ctx } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 import { Context } from 'koa';
-import { SignInOrRegisterDto } from '../dtos/auth.dto';
-import { UserProfileResponse } from '../dtos/account.dto';
-import { AuthResponseDto, ErrorResponseDto } from '../dtos/response.dto';
-import { authService } from '../services/auth.service';
+import { SignInOrRegisterDto } from '../dtos/auth.dto.js';
+import { UserProfileResponse } from '../dtos/account.dto.js';
+import { AuthResponseDto, ErrorResponseDto } from '../dtos/response.dto.js';
+import { authService } from '../services/auth.service.js';
 import { logger } from '../helpers/logger.js';
 
 

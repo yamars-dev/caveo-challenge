@@ -1,5 +1,5 @@
 import { Context, Next } from 'koa';
-import { verifyJWT, extractToken } from '../helpers/jwt.helper';
+import { verifyJWT, extractToken } from '../helpers/jwt.helper.js';
 
 
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID!;

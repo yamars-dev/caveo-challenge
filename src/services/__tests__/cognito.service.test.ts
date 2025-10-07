@@ -7,7 +7,7 @@ import {
   UpdateUserAttributesCommand,
   AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { CognitoService } from '../cognito.service';
+import { CognitoService } from '../cognito.service.js';
 
 const cognitoMock = mockClient(CognitoIdentityProviderClient);
 
