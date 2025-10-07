@@ -128,22 +128,34 @@ jobs:
         docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
     
     - name: Deploy to EC2
+      env:
+        EC2_PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
       run: |
-        echo "${{ secrets.EC2_PRIVATE_KEY }}" > private_key.pem
-        chmod 600 private_key.pem
+        # Create secure temporary file for private key
+        TEMP_KEY=$(mktemp)
+        trap "rm -f $TEMP_KEY" EXIT
         
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} bash << 'ENDSSH'
+        # Write key to temp file without echoing
+        printf '%s\n' "$EC2_PRIVATE_KEY" > "$TEMP_KEY"
+        chmod 600 "$TEMP_KEY"
+        
+        ssh -i "$TEMP_KEY" -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} bash << 'ENDSSH'
           set -e
           
           echo "[deploy] Installing jq if needed"
           command -v jq || sudo apt-get update -qq && sudo apt-get install -y jq
           
-          echo "[deploy] Fetching secrets and creating .env"
-          aws secretsmanager get-secret-value \
+          echo "[deploy] Fetching secrets and creating .env with secure permissions"
+          # Create .env with restricted permissions (600 = rw-------)
+          (umask 077 && aws secretsmanager get-secret-value \
             --secret-id caveo/app/environment \
             --region us-east-1 \
             --query SecretString \
-            --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
+            --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env)
+          
+          # Verify permissions
+          chmod 600 .env
+          echo "[deploy] .env permissions: $(ls -l .env | awk '{print $1}')"
           
           echo "[deploy] Pulling latest image"
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
@@ -177,5 +189,3 @@ jobs:
             exit 1
           fi
         ENDSSH
-        
-        rm -f private_key.pem
