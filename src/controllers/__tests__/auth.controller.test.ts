@@ -3,6 +3,7 @@ import { authService } from '../../services/auth.service.js';
 import { SignInOrRegisterDto } from '../../dtos/auth.dto.js';
 import { AuthResponseDto } from '../../dtos/response.dto.js';
 import { Context } from 'koa';
+import { maskEmail } from '../../helpers/logger.js';
 
 // Mock dependencies
 jest.mock('../../services/auth.service.js');
@@ -66,7 +67,7 @@ describe('AuthController', () => {
       expect(result.user).toEqual(mockServiceResponse.user);
       expect(result.tokens).toEqual(mockServiceResponse.tokens);
       expect(mockContext.log?.info).toHaveBeenCalledWith(
-        { email: signInDto.email },
+        { email: maskEmail(signInDto.email) },
         'Authentication attempt'
       );
       expect(mockContext.log?.info).toHaveBeenCalledWith(
@@ -195,12 +196,12 @@ describe('AuthController', () => {
         {
           errorMessage: mockError.message,
           errorCode: undefined,
-          email: signInDto.email,
+          email: maskEmail(signInDto.email),
         },
         'Authentication failed'
       );
       expect(mockContext.log?.info).toHaveBeenCalledWith(
-        { email: signInDto.email },
+        { email: maskEmail(signInDto.email) },
         'Authentication attempt'
       );
     });
@@ -227,7 +228,7 @@ describe('AuthController', () => {
       }
 
       expect(mockContext.log?.info).toHaveBeenCalledWith(
-        { email: signInDto.email },
+        { email: maskEmail(signInDto.email) },
         'Authentication attempt'
       );
       expect(mockContext.log?.error).toHaveBeenCalled();
