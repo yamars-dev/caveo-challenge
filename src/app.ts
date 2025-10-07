@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
-import pinoHttp from 'pino-http';
 import serve from 'koa-static';
 import helmet from 'koa-helmet';
 import rateLimit from 'koa-ratelimit';
@@ -77,17 +76,30 @@ app.use(
   })
 );
 
-app.use(
-  pinoHttp({
-    logger,
-    autoLogging: {
-      ignore: (req) => req.url === '/health' || req.url === '/favicon.ico',
-    },
-  }) as any
-);
+// Logging middleware
+app.use(async (ctx, next) => {
+  const start = Date.now();
+  const { method, url } = ctx.request;
+  
+  // Skip logging for health check and favicon
+  if (url === '/health' || url === '/favicon.ico') {
+    await next();
+    return;
+  }
+  
+  try {
+    await next();
+    const ms = Date.now() - start;
+    logger.info({ method, url, status: ctx.status, duration: ms }, 'Request completed');
+  } catch (error) {
+    const ms = Date.now() - start;
+    logger.error({ method, url, error, duration: ms }, 'Request failed');
+    throw error;
+  }
+});
 
 app.use(async (ctx, next) => {
-  (ctx as any).log = (ctx.request as any).log || logger;
+  (ctx as any).log = logger;
   await next();
 });
 
