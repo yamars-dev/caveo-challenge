@@ -38,7 +38,7 @@ jobs:
       run: npx tsc --noEmit
     
     - name: Run ESLint
-      run: npm run lint
+      run: npm run lint -- --max-warnings=50
 
   test:
     name: Unit Tests
