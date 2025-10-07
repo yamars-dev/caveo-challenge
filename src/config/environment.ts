@@ -54,6 +54,12 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
+  // Additional sanity checks: ensure Cognito env vars are not left as placeholders
+  const placeholderPattern = /\<.+\>|TODO|REPLACE_ME|<REPLACE>/i;
+  if (placeholderPattern.test(process.env.COGNITO_CLIENT_ID || '') || placeholderPattern.test(process.env.COGNITO_USER_POOL_ID || '')) {
+    throw new Error('Cognito environment variables appear to be placeholders; please set real values for COGNITO_CLIENT_ID and COGNITO_USER_POOL_ID');
+  }
+
   return {
     nodeEnv: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
