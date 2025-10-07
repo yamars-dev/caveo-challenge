@@ -5,10 +5,8 @@ Modern TypeScript API with AWS integration and automated CI/CD pipeline.
 ## Features
 
 - **Node.js 22** with ESM modules and Bundler resolution
-- **TypeScript** with modern compilation and strict type c- Infrastructure and application deployment unified
-
-## Quick Testking
-- **AWS Integration**: Cognito, ECR Public, Secrets Manager
+- **TypeScript** with modern compilation and strict type checks
+- **AWS Integration**: Cognito, Secrets Manager
 - **Complete Test Suite**: 120 tests with Jest (100% passing)
 - **Automated CI/CD**: GitHub Actions with multi-stage pipeline
 - **Docker Production Ready**: Multi-stage optimized Dockerfile
@@ -19,12 +17,23 @@ Modern TypeScript API with AWS integration and automated CI/CD pipeline.
 ## Infrastructure
 
 Complete AWS infrastructure managed with Terraform:
-- **EC2 Instance**: t3.micro with auto-scaling ready
-- **ECR Public**: Docker image registry
-- **Cognito**: User Pool with admin/user groups
-- **Secrets Manager**: Secure environment variables
-- **IAM Roles**: EC2 instance profile with Secrets Manager access
-- **Security Groups**: Configured for HTTP/HTTPS/SSH access
+- **RDS PostgreSQL 16.4**: db.t3.micro with 20GB storage, encrypted, auto-scaling to 100GB
+- **EC2 Instance**: t3.micro with Elastic IP and IAM instance profile
+- **Cognito**: User Pool with admin/user groups for authentication
+- **Secrets Manager**: Secure environment variable storage with automatic injection
+- **IAM Roles**: EC2 instance profile with Secrets Manager and ECR access
+- **Security Groups**: Separate groups for API (ports 22, 3000) and RDS (port 5432)
+- **VPC & Subnets**: Default VPC with multi-AZ subnet group for RDS
+
+### Database
+
+- **Engine**: PostgreSQL 16.4
+- **Instance**: db.t3.micro (2 vCPU, 1 GB RAM)
+- **Storage**: 20 GB SSD (gp3) with auto-scaling up to 100 GB
+- **Backup**: 7-day retention with automated snapshots
+- **Encryption**: Enabled at rest
+- **High Availability**: Multi-AZ deployment ready
+- **Monitoring**: CloudWatch logs for PostgreSQL and upgrades
 
 ## CI/CD Pipeline
 
@@ -93,29 +102,47 @@ docker run -p 3000:3000 --env-file .env caveo-api
 
 ## Deployment
 
-### Automated (Recommended)
+### Automated CI/CD
 
-Simply push to the main branch - the CI/CD pipeline handles everything:
+The project uses a fully automated CI/CD pipeline. Any push to the `main` branch triggers automatic deployment:
 
 ```bash
+# Trigger deployment with your changes
+git add .
+git commit -m "your changes"
 git push origin main
 ```
 
-The pipeline will:
-1. Run all tests
-2. Build and push Docker image
-3. Deploy to AWS EC2
-4. Perform health checks
+The pipeline automatically:
+1. ✅ Runs ESLint validation (0 errors enforced)
+2. ✅ Executes 120 Jest tests (100% pass rate required)
+3. ✅ Builds TypeScript and creates optimized Docker image
+4. ✅ Pushes image to ECR Public with `latest` and commit SHA tags
+5. ✅ Deploys to EC2 with zero-downtime strategy
+6. ✅ Loads environment variables from AWS Secrets Manager
+7. ✅ Connects to RDS PostgreSQL database
+8. ✅ Performs health checks
 
-### Manual AWS Setup
+**Deployment Time**: ~3-4 minutes from push to live
 
-If you need to set up the infrastructure manually:
+### Infrastructure Management
+
+To provision or update the AWS infrastructure, use Terraform:
 
 ```bash
 cd terraform
+
+# Initialize Terraform
 terraform init
+
+# Review changes
 terraform plan
+
+# Apply infrastructure changes
 terraform apply
+
+# View outputs (EC2 IP, RDS endpoint, etc.)
+terraform output
 ```
 
 ## Project Structure
@@ -204,12 +231,8 @@ The API is documented with Swagger/OpenAPI and available at `/docs` when running
 ## AWS Resources
 
 ### Infrastructure Components
-
-- **ECR Repository**: Public container registry for Docker images
-  - Public access for easy deployment
-  - Supports image versioning with tags
-
-- **EC2 Instance**: Application server
+ 
+**EC2 Instance**: Application server
   - Type: t3.micro
   - Docker: Active and configured
   - Auto-restart: Enabled
@@ -248,9 +271,7 @@ open http://YOUR_EC2_IP:3000/docs
 
 ## Additional Documentation
 
-- **Architecture**: See `docs/architecture.md` for system design
 - **API Reference**: Available at `/docs` endpoint when running
-- **Terraform Outputs**: Run `terraform output` in terraform/ directory
 - **CI/CD Pipeline**: See `.github/workflows/ci-cd.yml`
 
 ## Security
@@ -298,7 +319,6 @@ This project demonstrates modern full-stack development best practices:
 
 2. **AWS Cloud Integration**
    - Cognito for authentication (User Pool + Groups)
-   - ECR Public for container registry
    - Secrets Manager for secure configuration
    - IAM roles with least-privilege access
 
@@ -310,7 +330,7 @@ This project demonstrates modern full-stack development best practices:
 
 4. **Infrastructure as Code**
    - Complete Terraform configuration
-   - 11 managed AWS resources
+   - Managed AWS resources
    - Reproducible infrastructure
    - State management with outputs
 
