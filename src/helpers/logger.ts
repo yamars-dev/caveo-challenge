@@ -1,9 +1,13 @@
 import pino from 'pino';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
+  // In production, use 'warn' by default to reduce log volume
+  // In development, use 'debug' for more verbose output
+  level: process.env.LOG_LEVEL || (isProduction ? 'warn' : 'info'),
+
   transport: isDevelopment
     ? {
         target: 'pino-pretty',
@@ -26,7 +30,8 @@ export const logger = pino({
       url: req.url,
       headers: {
         host: req.headers.host,
-        userAgent: req.headers['user-agent'],
+        // Truncate user-agent to prevent extremely long headers
+        userAgent: req.headers['user-agent']?.substring(0, 200),
       },
     }),
     res: (res) => ({
