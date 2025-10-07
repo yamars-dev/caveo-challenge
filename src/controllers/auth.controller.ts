@@ -5,7 +5,7 @@ import { SignInOrRegisterDto } from '../dtos/auth.dto.js';
 import { UserProfileResponse } from '../dtos/account.dto.js';
 import { AuthResponseDto } from '../dtos/response.dto.js';
 import { authService } from '../services/auth.service.js';
-import { logger } from '../helpers/logger.js';
+import { logger, maskEmail } from '../helpers/logger.js';
 
 @JsonController('/auth')
 export class AuthController {
@@ -65,7 +65,7 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     const log = (ctx as any).log || logger;
 
-    log.info({ email: data.email }, 'Authentication attempt');
+  log.info({ email: maskEmail(data.email) }, 'Authentication attempt');
 
     try {
       const result = await authService.signInOrRegister(data.email, data.password, data.name);
@@ -108,7 +108,7 @@ export class AuthController {
         {
           errorMessage: error.message,
           errorCode: error.code,
-          email: data.email,
+          email: maskEmail(data.email),
         },
         'Authentication failed'
       );
