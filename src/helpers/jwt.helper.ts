@@ -72,14 +72,9 @@ export async function verifyJWT(token: string): Promise<jwt.JwtPayload> {
  * @param token - JWT token string
  * @returns Decoded payload
  */
-export function decodeJWT(token: string): any {
-  try {
-    const payload = token.split('.')[1];
-    return JSON.parse(Buffer.from(payload, 'base64').toString());
-  } catch {
-    throw new Error('Invalid JWT format');
-  }
-}
+// Note: decoding without verification is dangerous for production use.
+// Tests should use `jwt.decode` directly when needed. The previous
+// decodeJWT helper was removed to keep the public API minimal.
 
 /**
  * Extract Bearer token from Authorization header
