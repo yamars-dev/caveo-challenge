@@ -1,3 +1,4 @@
+
 import jwt from 'jsonwebtoken';
 import { JwksClient } from 'jwks-rsa';
 
@@ -9,7 +10,7 @@ const JWKS_URI = `https://cognito-idp.${REGION}.amazonaws.com/${USER_POOL_ID}/.w
 const jwksClient = new JwksClient({
   jwksUri: JWKS_URI,
   cache: true,
-  cacheMaxAge: 600000, // 10 minutes
+  cacheMaxAge: 600000
 });
 
 function getSigningKey(header: jwt.JwtHeader): Promise<string> {
@@ -17,7 +18,6 @@ function getSigningKey(header: jwt.JwtHeader): Promise<string> {
     if (!header.kid) {
       return reject(new Error('Missing kid in token header'));
     }
-
     jwksClient.getSigningKey(header.kid, (err, key) => {
       if (err) {
         return reject(err);
@@ -32,55 +32,32 @@ function getSigningKey(header: jwt.JwtHeader): Promise<string> {
 }
 
 export async function verifyJWT(token: string): Promise<jwt.JwtPayload> {
+  const decoded = jwt.decode(token, { complete: true });
+  if (!decoded || !decoded.header) {
+    throw new Error('Invalid token format');
+  }
+  const signingKey = await getSigningKey(decoded.header);
   return new Promise((resolve, reject) => {
-    const decoded = jwt.decode(token, { complete: true });
-
-    if (!decoded || !decoded.header) {
-      return reject(new Error('Invalid token format'));
-    }
-
-    getSigningKey(decoded.header)
-      .then((signingKey) => {
-        jwt.verify(
-          token,
-          signingKey,
-          {
-            algorithms: ['RS256'],
-            issuer: JWKS_URL,
-          },
-          (err, payload) => {
-            if (err) {
-              return reject(err);
-            }
-            if (!payload || typeof payload === 'string') {
-              return reject(new Error('Invalid token payload'));
-            }
-            resolve(payload);
-          }
-        );
-      })
-      .catch(reject);
+    jwt.verify(
+      token,
+      signingKey,
+      {
+        algorithms: ['RS256'],
+        issuer: JWKS_URL,
+      },
+      (err, payload) => {
+        if (err) {
+          return reject(err);
+        }
+        if (!payload || typeof payload === 'string') {
+          return reject(new Error('Invalid token payload'));
+        }
+        resolve(payload);
+      }
+    );
   });
 }
 
-/**
- * Decode JWT token WITHOUT verification
- * ⚠️ WARNING: This function does NOT validate the token signature!
- * Use verifyJWT() for security-critical operations.
- * This is only for debugging or extracting claims from already-verified tokens.
- *
- * @param token - JWT token string
- * @returns Decoded payload
- */
-// Note: decoding without verification is dangerous for production use.
-// Tests should use `jwt.decode` directly when needed. The previous
-// decodeJWT helper was removed to keep the public API minimal.
-
-/**
- * Extract Bearer token from Authorization header
- * @param authHeader - Authorization header value (e.g., "Bearer abc123")
- * @returns Token string or null if invalid format
- */
 export function extractToken(authHeader?: string): string | null {
   if (!authHeader?.startsWith('Bearer ')) {
     return null;

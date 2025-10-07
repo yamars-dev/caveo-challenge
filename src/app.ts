@@ -3,6 +3,7 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import serve from 'koa-static';
 import { connectDatabase } from './entities/index.js';
+import { errorHandler } from './middlewares/errorHandler.middleware.js';
 import { logger } from './helpers/logger.js';
 import { initializeEnvironment } from './config/env-loader.js';
 import { validateEnvironment, sanitizeEnvForLogging } from './security/env-validation.js';
@@ -21,6 +22,7 @@ import {
 import { readinessMiddleware } from './middlewares/routes.middleware.js';
 
 const app = new Koa();
+app.use(errorHandler);
 
 // Environment will be initialized and validated during startup sequence below
 

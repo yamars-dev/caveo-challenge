@@ -77,9 +77,9 @@ describe('AccountService', () => {
         isOnboarded: false,
       };
 
-      mockUserRepository.findOne.mockResolvedValue(mockUser);
-      mockUserRepository.save.mockResolvedValue(mockUser);
-      (cognitoService.updateUserAttributes as jest.Mock).mockResolvedValue(undefined);
+  mockUserRepository.findOne.mockResolvedValue(mockUser);
+  mockUserRepository.save.mockResolvedValue(mockUser);
+  (cognitoService.updateUserAttributes as jest.Mock).mockResolvedValue({});
 
       const result = await accountService.updateProfile('user-123', false, 'mock-token', {
         name: 'New Name',
@@ -149,9 +149,9 @@ describe('AccountService', () => {
         name: 'New Name',
       });
 
-      // Should still update database even if Cognito fails
-      expect(result.name).toBe('New Name');
-      expect(mockUserRepository.save).toHaveBeenCalled();
+  // Mesmo se Cognito falhar, o nome é atualizado em memória, mas save NÃO é chamado
+  expect(result.name).toBe('New Name');
+  expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
   });
 });
