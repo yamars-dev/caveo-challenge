@@ -8,8 +8,16 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { logger } from '../helpers/logger.js';
 
+/**
+ * AWS Cognito client with timeout and retry configuration
+ * Prevents hanging requests and improves reliability
+ */
 const client = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION || 'us-east-1',
+  requestHandler: {
+    requestTimeout: 10000, // 10 seconds timeout
+  },
+  maxAttempts: 3, // Retry up to 3 times on network errors
 });
 
 const CLIENT_ID = process.env.COGNITO_CLIENT_ID!;

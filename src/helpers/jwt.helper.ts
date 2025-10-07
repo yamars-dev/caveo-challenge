@@ -63,6 +63,15 @@ export async function verifyJWT(token: string): Promise<jwt.JwtPayload> {
   });
 }
 
+/**
+ * Decode JWT token WITHOUT verification
+ * ⚠️ WARNING: This function does NOT validate the token signature!
+ * Use verifyJWT() for security-critical operations.
+ * This is only for debugging or extracting claims from already-verified tokens.
+ *
+ * @param token - JWT token string
+ * @returns Decoded payload
+ */
 export function decodeJWT(token: string): any {
   try {
     const payload = token.split('.')[1];
@@ -72,6 +81,11 @@ export function decodeJWT(token: string): any {
   }
 }
 
+/**
+ * Extract Bearer token from Authorization header
+ * @param authHeader - Authorization header value (e.g., "Bearer abc123")
+ * @returns Token string or null if invalid format
+ */
 export function extractToken(authHeader?: string): string | null {
   if (!authHeader?.startsWith('Bearer ')) {
     return null;
