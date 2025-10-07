@@ -5,7 +5,7 @@ import serve from 'koa-static';
 import { connectDatabase } from './entities/index.js';
 import { logger } from './helpers/logger.js';
 import { initializeEnvironment } from './config/env-loader.js';
-import { validateEnvironment } from './security/env-validation.js';
+import { validateEnvironment, sanitizeEnvForLogging } from './security/env-validation.js';
 import { setupControllers } from './config/controllers.js';
 
 // Middlewares
@@ -21,8 +21,7 @@ import {
 
 const app = new Koa();
 
-// Validate environment variables on startup
-validateEnvironment();
+// Environment will be initialized and validated during startup sequence below
 
 // Apply middlewares in order
 app.use(corsMiddleware);
@@ -46,7 +45,13 @@ setupControllers(app);
 (async () => {
   try {
     // Load environment variables from config.yml
-    await initializeEnvironment();
+  await initializeEnvironment();
+
+  // Validate env after loading (will throw on missing/invalid values)
+  validateEnvironment();
+
+  // Log a sanitized view of environment (no secrets)
+  logger.info({ env: sanitizeEnvForLogging() }, 'Environment initialized');
 
     const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
