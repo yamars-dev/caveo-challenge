@@ -12,7 +12,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     authService = new AuthService();
-    
+
     mockUserRepo = {
       findOne: jest.fn(),
       create: jest.fn(),
@@ -43,10 +43,7 @@ describe('AuthService', () => {
       mockUserRepo.findOne.mockResolvedValue(existingUser);
       (cognitoService.signIn as jest.Mock).mockResolvedValue(mockTokens);
 
-      const result = await authService.signInOrRegister(
-        'existing@example.com',
-        'Password123!'
-      );
+      const result = await authService.signInOrRegister('existing@example.com', 'Password123!');
 
       expect(result).toEqual({
         user: existingUser,
@@ -57,10 +54,7 @@ describe('AuthService', () => {
       expect(mockUserRepo.findOne).toHaveBeenCalledWith({
         where: { email: 'existing@example.com' },
       });
-      expect(cognitoService.signIn).toHaveBeenCalledWith(
-        'existing@example.com',
-        'Password123!'
-      );
+      expect(cognitoService.signIn).toHaveBeenCalledWith('existing@example.com', 'Password123!');
     });
 
     it('should return isNewUser=false for login', async () => {
@@ -79,10 +73,7 @@ describe('AuthService', () => {
         ExpiresIn: 3600,
       });
 
-      const result = await authService.signInOrRegister(
-        'test@example.com',
-        'Password123!'
-      );
+      const result = await authService.signInOrRegister('test@example.com', 'Password123!');
 
       expect(result.isNewUser).toBe(false);
     });
@@ -164,11 +155,7 @@ describe('AuthService', () => {
       mockUserRepo.create.mockReturnValue(newUser);
       mockUserRepo.save.mockResolvedValue(newUser);
 
-      await authService.signInOrRegister(
-        'new@example.com',
-        'Password123!',
-        'New User'
-      );
+      await authService.signInOrRegister('new@example.com', 'Password123!', 'New User');
 
       expect(mockUserRepo.create).toHaveBeenCalledWith({
         id: 'user-123',
@@ -195,16 +182,9 @@ describe('AuthService', () => {
       mockUserRepo.create.mockReturnValue({});
       mockUserRepo.save.mockResolvedValue({});
 
-      await authService.signInOrRegister(
-        'new@example.com',
-        'Password123!',
-        'New User'
-      );
+      await authService.signInOrRegister('new@example.com', 'Password123!', 'New User');
 
-      expect(cognitoService.addToGroup).toHaveBeenCalledWith(
-        'new@example.com',
-        'user'
-      );
+      expect(cognitoService.addToGroup).toHaveBeenCalledWith('new@example.com', 'user');
     });
 
     it('should return isNewUser=true for registration', async () => {
@@ -275,24 +255,17 @@ describe('AuthService', () => {
       mockUserRepo.create.mockReturnValue({});
       mockUserRepo.save.mockResolvedValue({});
 
-      await authService.signInOrRegister(
-        'new@example.com',
-        'Password123!',
-        'New User'
-      );
+      await authService.signInOrRegister('new@example.com', 'Password123!', 'New User');
 
-      expect(cognitoService.signIn).toHaveBeenCalledWith(
-        'new@example.com',
-        'Password123!'
-      );
+      expect(cognitoService.signIn).toHaveBeenCalledWith('new@example.com', 'Password123!');
     });
 
     it('should throw error when name not provided on registration', async () => {
       mockUserRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        authService.signInOrRegister('new@example.com', 'Password123!')
-      ).rejects.toThrow('Name is required for registration');
+      await expect(authService.signInOrRegister('new@example.com', 'Password123!')).rejects.toThrow(
+        'Name is required for registration'
+      );
     });
   });
 });

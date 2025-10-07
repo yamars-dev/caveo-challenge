@@ -4,9 +4,12 @@ import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
 import { extractToken } from '../helpers/jwt.helper.js';
 import { UpdateProfileDto, UserProfileResponse } from '../dtos/account.dto.js';
-import { GetProfileResponseDto, EditProfileResponseDto, ErrorResponseDto } from '../dtos/response.dto.js';
+import {
+  GetProfileResponseDto,
+  EditProfileResponseDto,
+  ErrorResponseDto,
+} from '../dtos/response.dto.js';
 import { logger } from '../helpers/logger.js';
-
 
 @JsonController('/account')
 export class AccountController {
@@ -64,7 +67,8 @@ export class AccountController {
   @Authorized()
   @OpenAPI({
     summary: 'Edit user profile',
-    description: 'Update user profile. Users can edit their own name. Admins can edit name and role of any user.',
+    description:
+      'Update user profile. Users can edit their own name. Admins can edit name and role of any user.',
     tags: ['Account'],
     security: [{ bearerAuth: [] }],
     requestBody: {
@@ -75,7 +79,11 @@ export class AccountController {
             properties: {
               name: { type: 'string', example: 'Jane Doe' },
               role: { type: 'string', enum: ['user', 'admin'], example: 'user' },
-              userId: { type: 'string', example: 'abc-123', description: 'Target user ID (admin only)' },
+              userId: {
+                type: 'string',
+                example: 'abc-123',
+                description: 'Target user ID (admin only)',
+              },
             },
           },
         },
@@ -102,10 +110,13 @@ export class AccountController {
       '500': { description: 'Internal server error' },
     },
   })
-  async editAccount(@Body() data: UpdateProfileDto, @Ctx() ctx: Context): Promise<EditProfileResponseDto | ErrorResponseDto> {
+  async editAccount(
+    @Body() data: UpdateProfileDto,
+    @Ctx() ctx: Context
+  ): Promise<EditProfileResponseDto | ErrorResponseDto> {
     const user = ctx.state.user;
     const log = (ctx as any).log || logger;
-    
+
     if (!user) {
       ctx.status = 401;
       return {
@@ -132,9 +143,9 @@ export class AccountController {
       };
     } catch (error: any) {
       log.error({ err: error, userId: user.id }, 'Edit account failed');
-      
+
       const errorMessage = error?.message || '';
-      
+
       if (
         errorMessage.includes('permission') ||
         errorMessage.includes('only edit your own') ||

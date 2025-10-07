@@ -35,7 +35,16 @@ export const logger = pino({
     err: pino.stdSerializers.err,
   },
   redact: {
-    paths: ['password', 'accessToken', 'idToken', 'refreshToken', '*.password', 'tokens.AccessToken', 'tokens.IdToken', 'tokens.RefreshToken'],
+    paths: [
+      'password',
+      'accessToken',
+      'idToken',
+      'refreshToken',
+      '*.password',
+      'tokens.AccessToken',
+      'tokens.IdToken',
+      'tokens.RefreshToken',
+    ],
     censor: '[REDACTED]',
   },
 });

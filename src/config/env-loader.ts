@@ -26,7 +26,7 @@ let configCache: Config | null = null;
 
 function loadConfig(): Config {
   if (configCache) return configCache;
-  
+
   try {
     const fileContents = readFileSync(configPath, 'utf8');
     configCache = parse(fileContents);
@@ -62,7 +62,7 @@ async function loadFromSecretsManager(config: Config): Promise<void> {
 
     if (response.SecretString) {
       const secrets = JSON.parse(response.SecretString);
-      
+
       Object.entries(secrets).forEach(([key, value]) => {
         process.env[key] = String(value);
       });
@@ -71,7 +71,7 @@ async function loadFromSecretsManager(config: Config): Promise<void> {
     }
   } catch (error) {
     logger.error({ err: error }, 'Failed to load from Secrets Manager');
-    
+
     if (config.fallback_to_env) {
       logger.warn('Falling back to .env file');
       dotenvConfig();

@@ -23,12 +23,12 @@ describe('AccountService', () => {
 
   beforeEach(() => {
     accountService = new AccountService();
-    
+
     mockUserRepository = {
       findOne: jest.fn(),
       save: jest.fn(),
     };
-    
+
     (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockUserRepository);
     jest.clearAllMocks();
   });
@@ -62,7 +62,9 @@ describe('AccountService', () => {
     it('should throw error when user not found', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await expect(accountService.getAccountDetails('nonexistent')).rejects.toThrow('User not found');
+      await expect(accountService.getAccountDetails('nonexistent')).rejects.toThrow(
+        'User not found'
+      );
     });
   });
 
@@ -80,12 +82,9 @@ describe('AccountService', () => {
       mockUserRepository.save.mockResolvedValue(mockUser);
       (cognitoService.updateUserAttributes as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await accountService.updateProfile(
-        'user-123',
-        false,
-        'mock-token',
-        { name: 'New Name' }
-      );
+      const result = await accountService.updateProfile('user-123', false, 'mock-token', {
+        name: 'New Name',
+      });
 
       expect(mockUser.name).toBe('New Name');
       expect(mockUser.isOnboarded).toBe(true);
@@ -106,12 +105,7 @@ describe('AccountService', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        accountService.updateProfile(
-          'nonexistent',
-          false,
-          'mock-token',
-          { name: 'New Name' }
-        )
+        accountService.updateProfile('nonexistent', false, 'mock-token', { name: 'New Name' })
       ).rejects.toThrow('User not found');
     });
 
@@ -127,12 +121,9 @@ describe('AccountService', () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockUserRepository.save.mockResolvedValue(mockUser);
 
-      const result = await accountService.updateProfile(
-        'user-123',
-        false,
-        '',
-        { name: 'New Name' }
-      );
+      const result = await accountService.updateProfile('user-123', false, '', {
+        name: 'New Name',
+      });
 
       expect(mockUser.name).toBe('New Name');
       expect(mockUser.isOnboarded).toBe(true);
@@ -151,14 +142,13 @@ describe('AccountService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockUserRepository.save.mockResolvedValue(mockUser);
-      (cognitoService.updateUserAttributes as jest.Mock).mockRejectedValue(new Error('Cognito error'));
-
-      const result = await accountService.updateProfile(
-        'user-123',
-        false,
-        'mock-token',
-        { name: 'New Name' }
+      (cognitoService.updateUserAttributes as jest.Mock).mockRejectedValue(
+        new Error('Cognito error')
       );
+
+      const result = await accountService.updateProfile('user-123', false, 'mock-token', {
+        name: 'New Name',
+      });
 
       // Should still update database even if Cognito fails
       expect(result.name).toBe('New Name');

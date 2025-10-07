@@ -1,6 +1,6 @@
 /**
  * Environment Configuration Module
- * 
+ *
  * This module handles environment-specific configurations for the Caveo API.
  * It supports both development (local .env) and production (AWS Secrets Manager) environments.
  */
@@ -9,7 +9,7 @@ export interface EnvironmentConfig {
   // Application
   nodeEnv: 'development' | 'production' | 'test';
   port: number;
-  
+
   // Database
   database: {
     host: string;
@@ -18,7 +18,7 @@ export interface EnvironmentConfig {
     password: string;
     database: string;
   };
-  
+
   // AWS Services
   aws: {
     region: string;
@@ -45,11 +45,11 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     'DB_DATABASE',
     'AWS_REGION',
     'COGNITO_USER_POOL_ID',
-    'COGNITO_CLIENT_ID'
+    'COGNITO_CLIENT_ID',
   ];
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
+
   if (missingVars.length > 0) {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
@@ -57,7 +57,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
   return {
     nodeEnv: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
-    
+
     database: {
       host: process.env.DB_HOST!,
       port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -65,7 +65,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
       password: process.env.DB_PASSWORD!,
       database: process.env.DB_DATABASE!,
     },
-    
+
     aws: {
       region: process.env.AWS_REGION!,
       cognito: {
@@ -94,7 +94,7 @@ export function validateEnvironment(): void {
  */
 export function getSafeConfig(): Partial<EnvironmentConfig> {
   const config = getEnvironmentConfig();
-  
+
   return {
     nodeEnv: config.nodeEnv,
     port: config.port,

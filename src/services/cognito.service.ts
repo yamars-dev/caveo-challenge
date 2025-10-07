@@ -16,7 +16,6 @@ const CLIENT_ID = process.env.COGNITO_CLIENT_ID!;
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID!;
 
 export class CognitoService {
-
   async signUp(email: string, password: string, name: string) {
     try {
       const command = new SignUpCommand({
@@ -30,7 +29,7 @@ export class CognitoService {
       });
 
       const response = await client.send(command);
-      
+
       return response.UserSub;
     } catch (error: any) {
       logger.error({ err: error, email }, 'SignUp failed');
@@ -51,7 +50,10 @@ export class CognitoService {
     }
   }
 
-  async signIn(email: string, password: string): Promise<{ AccessToken: string; IdToken: string; RefreshToken: string; ExpiresIn: number }> {
+  async signIn(
+    email: string,
+    password: string
+  ): Promise<{ AccessToken: string; IdToken: string; RefreshToken: string; ExpiresIn: number }> {
     try {
       const command = new InitiateAuthCommand({
         ClientId: CLIENT_ID,
@@ -65,11 +67,15 @@ export class CognitoService {
       const response = await client.send(command);
       const authResult = response.AuthenticationResult;
 
+      if (!authResult) {
+        throw new Error('Authentication failed - no result');
+      }
+
       return {
-        AccessToken: authResult?.AccessToken!,
-        IdToken: authResult?.IdToken!,
-        RefreshToken: authResult?.RefreshToken!,
-        ExpiresIn: authResult?.ExpiresIn!,
+        AccessToken: authResult.AccessToken!,
+        IdToken: authResult.IdToken!,
+        RefreshToken: authResult.RefreshToken!,
+        ExpiresIn: authResult.ExpiresIn!,
       };
     } catch (error: any) {
       logger.error({ err: error, email }, 'SignIn failed');
@@ -94,7 +100,6 @@ export class CognitoService {
     }
   }
 
- 
   async addToGroup(email: string, groupName: 'admin' | 'user') {
     const command = new AdminAddUserToGroupCommand({
       UserPoolId: USER_POOL_ID,
@@ -108,13 +113,13 @@ export class CognitoService {
   async updateUserAttributes(accessToken: string, attributes: { name?: string }) {
     try {
       const userAttributes = [];
-      
+
       if (attributes.name) {
         userAttributes.push({ Name: 'name', Value: attributes.name });
       }
 
       if (userAttributes.length === 0) {
-        return; 
+        return;
       }
 
       const command = new UpdateUserAttributesCommand({
@@ -125,24 +130,23 @@ export class CognitoService {
       await client.send(command);
     } catch (error: any) {
       logger.error({ err: error, accessToken: '[REDACTED]' }, 'UpdateUserAttributes failed');
-      
+
       if (error.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
       }
-      
+
       if (error.name === 'NotAuthorizedException') {
         throw new Error('Invalid or expired access token');
       }
-      
+
       throw new Error(error.message || 'Failed to update user attributes');
     }
   }
 
-
   async adminUpdateUserAttributes(username: string, attributes: { name?: string }) {
     try {
       const userAttributes = [];
-      
+
       if (attributes.name) {
         userAttributes.push({ Name: 'name', Value: attributes.name });
       }
@@ -160,15 +164,15 @@ export class CognitoService {
       await client.send(command);
     } catch (error: any) {
       logger.error({ err: error, username }, 'AdminUpdateUserAttributes failed');
-      
+
       if (error.name === 'UserNotFoundException') {
         throw new Error('User not found');
       }
-      
+
       if (error.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
       }
-      
+
       throw new Error(error.message || 'Failed to update user attributes');
     }
   }

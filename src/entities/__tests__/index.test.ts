@@ -22,19 +22,19 @@ describe('Database Connection', () => {
   beforeEach(() => {
     mockApp = new Koa();
     mockInitialize = jest.fn().mockResolvedValue(undefined);
-    
+
     Object.defineProperty(AppDataSource, 'isInitialized', {
       value: false,
       writable: true,
       configurable: true,
     });
-    
+
     Object.defineProperty(AppDataSource, 'initialize', {
       value: mockInitialize,
       writable: true,
       configurable: true,
     });
-    
+
     jest.clearAllMocks();
   });
 
@@ -100,12 +100,12 @@ describe('Database Connection', () => {
       });
 
       await connectDatabase(mockApp);
-      
+
       Object.defineProperty(AppDataSource, 'isInitialized', {
         value: true,
         configurable: true,
       });
-      
+
       await connectDatabase(mockApp);
 
       expect(mockInitialize).toHaveBeenCalledTimes(1);

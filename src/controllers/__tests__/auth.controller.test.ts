@@ -183,9 +183,9 @@ describe('AuthController', () => {
       const mockError = new Error('Invalid credentials');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(
-        controller.signInOrRegister(signInDto, mockContext as Context)
-      ).rejects.toThrow('Invalid credentials');
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
+        'Invalid credentials'
+      );
 
       expect(mockContext.log?.error).toHaveBeenCalledWith(
         { err: mockError, email: signInDto.email },
@@ -201,9 +201,9 @@ describe('AuthController', () => {
       const mockError = new Error('UserNotFoundException');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(
-        controller.signInOrRegister(signInDto, mockContext as Context)
-      ).rejects.toThrow('UserNotFoundException');
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
+        'UserNotFoundException'
+      );
 
       expect(mockContext.log?.error).toHaveBeenCalled();
     });

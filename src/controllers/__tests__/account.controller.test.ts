@@ -81,7 +81,7 @@ describe('AccountController', () => {
     it('should handle profile with missing optional fields', async () => {
       mockContext.state!.user.name = undefined;
 
-      const result = await controller.getProfile(mockContext as Context) as GetProfileResponseDto;
+      const result = (await controller.getProfile(mockContext as Context)) as GetProfileResponseDto;
 
       expect(result.name).toBeUndefined();
       expect(result.email).toBe('user@example.com');
@@ -105,7 +105,10 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
+      const result = (await controller.editAccount(
+        updateDto,
+        mockContext as Context
+      )) as EditProfileResponseDto;
 
       expect(accountService.updateProfile).toHaveBeenCalledWith(
         'user-123',
@@ -207,7 +210,10 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
+      const result = (await controller.editAccount(
+        updateDto,
+        mockContext as Context
+      )) as EditProfileResponseDto;
 
       expect(accountService.updateProfile).toHaveBeenCalledWith(
         'user-123',
@@ -238,7 +244,10 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
+      const result = (await controller.editAccount(
+        updateDto,
+        mockContext as Context
+      )) as EditProfileResponseDto;
 
       expect(result.user.role).toBe('admin');
       expect(result.message).toBe('Profile updated successfully');
@@ -260,7 +269,10 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
+      const result = (await controller.editAccount(
+        updateDto,
+        mockContext as Context
+      )) as EditProfileResponseDto;
 
       expect(result).toEqual({
         message: 'Profile updated successfully',
@@ -286,8 +298,6 @@ describe('AccountController', () => {
         message: 'You cannot demote yourself from admin',
       });
     });
-
-
   });
 
   describe('PUT /account/edit - Error Handling', () => {
@@ -422,12 +432,7 @@ describe('AccountController', () => {
       await controller.editAccount(updateDto, mockContext as Context);
 
       expect(extractToken).toHaveBeenCalledWith(undefined);
-      expect(accountService.updateProfile).toHaveBeenCalledWith(
-        'user-123',
-        false,
-        '',
-        updateDto
-      );
+      expect(accountService.updateProfile).toHaveBeenCalledWith('user-123', false, '', updateDto);
     });
 
     it('should handle malformed authorization header', async () => {
@@ -451,12 +456,7 @@ describe('AccountController', () => {
       await controller.editAccount(updateDto, mockContext as Context);
 
       expect(extractToken).toHaveBeenCalledWith('InvalidFormat');
-      expect(accountService.updateProfile).toHaveBeenCalledWith(
-        'user-123',
-        false,
-        '',
-        updateDto
-      );
+      expect(accountService.updateProfile).toHaveBeenCalledWith('user-123', false, '', updateDto);
     });
   });
 
@@ -477,7 +477,10 @@ describe('AccountController', () => {
       (extractToken as jest.Mock).mockReturnValue('mock-token');
       (accountService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
-      const result = await controller.editAccount(updateDto, mockContext as Context) as EditProfileResponseDto;
+      const result = (await controller.editAccount(
+        updateDto,
+        mockContext as Context
+      )) as EditProfileResponseDto;
 
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('user');

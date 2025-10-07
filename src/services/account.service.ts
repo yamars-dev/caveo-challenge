@@ -5,10 +5,8 @@ import { UpdateProfileDto, UserProfileResponse } from '../dtos/account.dto.js';
 import { logger } from '../helpers/logger.js';
 
 export class AccountService {
-
   async getAccountDetails(userId: string): Promise<UserProfileResponse> {
-    const user = await AppDataSource.getRepository(UserEntity)
-      .findOne({ where: { id: userId } });
+    const user = await AppDataSource.getRepository(UserEntity).findOne({ where: { id: userId } });
 
     if (!user) {
       throw new Error('User not found');
@@ -16,7 +14,6 @@ export class AccountService {
 
     return this.mapToResponse(user);
   }
-
 
   async updateProfile(
     currentUserId: string,
@@ -27,11 +24,14 @@ export class AccountService {
     const userRepo = AppDataSource.getRepository(UserEntity);
 
     if (!isAdmin && data.userId && data.userId !== currentUserId) {
-      logger.warn({ currentUserId, requestedUserId: data.userId }, 'Unauthorized profile edit attempt');
+      logger.warn(
+        { currentUserId, requestedUserId: data.userId },
+        'Unauthorized profile edit attempt'
+      );
       throw new Error('You can only edit your own profile');
     }
 
-    let targetUserId = currentUserId; 
+    let targetUserId = currentUserId;
     if (isAdmin && data.userId) {
       targetUserId = data.userId;
     }
@@ -57,15 +57,21 @@ export class AccountService {
       }
       dbUser.role = data.role;
 
-      cognitoService.addToGroup(dbUser.email, data.role)
-        .catch(error => logger.warn({ error, userId: dbUser.id, role: data.role }, 'Cognito group sync failed'));
+      cognitoService
+        .addToGroup(dbUser.email, data.role)
+        .catch((error) =>
+          logger.warn({ error, userId: dbUser.id, role: data.role }, 'Cognito group sync failed')
+        );
     }
 
     await userRepo.save(dbUser);
 
     if (data.name && accessToken) {
-      cognitoService.updateUserAttributes(accessToken, { name: data.name })
-        .catch(error => logger.warn({ error, userId: dbUser.id }, 'Cognito attributes sync failed'));
+      cognitoService
+        .updateUserAttributes(accessToken, { name: data.name })
+        .catch((error) =>
+          logger.warn({ error, userId: dbUser.id }, 'Cognito attributes sync failed')
+        );
     }
 
     logger.info({ userId: dbUser.id, changes: Object.keys(data) }, 'Profile updated');
@@ -82,7 +88,6 @@ export class AccountService {
       isOnboarded: user.isOnboarded,
     };
   }
-
 }
 
 export const accountService = new AccountService();

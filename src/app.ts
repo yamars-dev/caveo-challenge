@@ -15,7 +15,6 @@ import { logger } from './helpers/logger.js';
 import { swaggerSpec } from './config/swagger.js';
 import { initializeEnvironment } from './config/env-loader.js';
 
-
 const app = new Koa();
 
 app.use(
@@ -56,10 +55,10 @@ app.use(async (ctx, next) => {
 // Health check endpoint
 app.use(async (ctx, next) => {
   if (ctx.path === '/health') {
-    ctx.body = { 
-      status: 'ok', 
+    ctx.body = {
+      status: 'ok',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
     };
     ctx.status = 200;
     return;
@@ -108,4 +107,3 @@ useKoaServer(app, {
     process.exit(1);
   }
 })();
-

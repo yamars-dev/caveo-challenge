@@ -12,10 +12,10 @@ describe('UsersController', () => {
         getRepository: jest.fn().mockReturnValue({
           find: jest.fn().mockResolvedValue([
             { id: '1', email: 'user1@test.com', name: 'User 1', role: 'user' },
-            { id: '2', email: 'user2@test.com', name: 'User 2', role: 'admin' }
-          ])
-        })
-      } as any
+            { id: '2', email: 'user2@test.com', name: 'User 2', role: 'admin' },
+          ]),
+        }),
+      } as any,
     };
   });
 
@@ -26,7 +26,7 @@ describe('UsersController', () => {
       expect(mockContext.db?.getRepository).toHaveBeenCalled();
       expect(result).toEqual([
         { id: '1', email: 'user1@test.com', name: 'User 1', role: 'user' },
-        { id: '2', email: 'user2@test.com', name: 'User 2', role: 'admin' }
+        { id: '2', email: 'user2@test.com', name: 'User 2', role: 'admin' },
       ]);
     });
   });

@@ -1,7 +1,6 @@
 import { DataSource } from 'typeorm';
 import Koa from 'koa';
 import { UserEntity } from './user.entity.js';
-import { getEnvironmentConfig } from '../config/environment.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -12,9 +11,12 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE!,
   synchronize: process.env.NODE_ENV !== 'production',
   entities: [UserEntity],
-  ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false,
-  } : false,
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : false,
 });
 
 export const connectDatabase = async (app: Koa): Promise<void> => {

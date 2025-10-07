@@ -3,7 +3,6 @@ import { UserEntity } from '../entities/user.entity.js';
 import { cognitoService } from './cognito.service.js';
 
 export class AuthService {
-
   async signInOrRegister(email: string, password: string, name?: string) {
     const userRepo = AppDataSource.getRepository(UserEntity);
     const user = await userRepo.findOne({ where: { email } });

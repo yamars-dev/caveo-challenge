@@ -26,11 +26,7 @@ describe('CognitoService', () => {
         UserSub: userSub,
       });
 
-      const result = await cognitoService.signUp(
-        'test@example.com',
-        'Password123!',
-        'Test User'
-      );
+      const result = await cognitoService.signUp('test@example.com', 'Password123!', 'Test User');
 
       expect(result).toBe(userSub);
       expect(cognitoMock.calls()).toHaveLength(1);
@@ -69,9 +65,9 @@ describe('CognitoService', () => {
         message: 'Password does not meet requirements',
       });
 
-      await expect(
-        cognitoService.signUp('test@example.com', 'weak', 'Test')
-      ).rejects.toThrow('Password does not meet requirements');
+      await expect(cognitoService.signUp('test@example.com', 'weak', 'Test')).rejects.toThrow(
+        'Password does not meet requirements'
+      );
     });
 
     it('should throw error when invalid parameters', async () => {
@@ -80,9 +76,9 @@ describe('CognitoService', () => {
         message: 'Invalid parameter',
       });
 
-      await expect(
-        cognitoService.signUp('invalid-email', 'Password123!', 'Test')
-      ).rejects.toThrow('Invalid email or password format');
+      await expect(cognitoService.signUp('invalid-email', 'Password123!', 'Test')).rejects.toThrow(
+        'Invalid email or password format'
+      );
     });
   });
 
@@ -132,9 +128,9 @@ describe('CognitoService', () => {
         message: 'User not found',
       });
 
-      await expect(
-        cognitoService.signIn('notfound@example.com', 'Password123!')
-      ).rejects.toThrow('Invalid email or password');
+      await expect(cognitoService.signIn('notfound@example.com', 'Password123!')).rejects.toThrow(
+        'Invalid email or password'
+      );
     });
 
     it('should throw error when invalid credentials', async () => {
@@ -143,9 +139,9 @@ describe('CognitoService', () => {
         message: 'Incorrect username or password',
       });
 
-      await expect(
-        cognitoService.signIn('test@example.com', 'WrongPassword')
-      ).rejects.toThrow('Invalid email or password');
+      await expect(cognitoService.signIn('test@example.com', 'WrongPassword')).rejects.toThrow(
+        'Invalid email or password'
+      );
     });
 
     it('should throw error when user is disabled', async () => {
@@ -154,9 +150,9 @@ describe('CognitoService', () => {
         message: 'User is disabled',
       });
 
-      await expect(
-        cognitoService.signIn('disabled@example.com', 'Password123!')
-      ).rejects.toThrow('User account is disabled');
+      await expect(cognitoService.signIn('disabled@example.com', 'Password123!')).rejects.toThrow(
+        'User account is disabled'
+      );
     });
 
     it('should throw error after too many attempts', async () => {
@@ -165,9 +161,9 @@ describe('CognitoService', () => {
         message: 'Too many requests',
       });
 
-      await expect(
-        cognitoService.signIn('test@example.com', 'Password123!')
-      ).rejects.toThrow('Too many login attempts. Please try again later');
+      await expect(cognitoService.signIn('test@example.com', 'Password123!')).rejects.toThrow(
+        'Too many login attempts. Please try again later'
+      );
     });
   });
 
@@ -208,9 +204,7 @@ describe('CognitoService', () => {
       const updateCall = calls[0].args[0] as any;
 
       expect(updateCall.input.AccessToken).toBe('mock-access-token');
-      expect(updateCall.input.UserAttributes).toEqual([
-        { Name: 'name', Value: 'New Name' },
-      ]);
+      expect(updateCall.input.UserAttributes).toEqual([{ Name: 'name', Value: 'New Name' }]);
     });
 
     it('should do nothing when no attributes provided', async () => {
@@ -232,7 +226,7 @@ describe('CognitoService', () => {
 
     it('should return without calling when no attributes', async () => {
       const result = await cognitoService.updateUserAttributes('token', {});
-      
+
       expect(result).toBeUndefined();
       expect(cognitoMock.calls()).toHaveLength(0);
     });
