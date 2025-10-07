@@ -83,13 +83,35 @@ export class AuthController {
         'Authentication successful'
       );
 
+      // Store RefreshToken in secure HttpOnly cookie
+      ctx.cookies.set('refreshToken', result.tokens.RefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      // Return only AccessToken and IdToken (not RefreshToken)
       return {
         message: result.isNewUser ? 'Registration successful' : 'Login successful',
         user: userResponse,
-        tokens: result.tokens,
+        tokens: {
+          AccessToken: result.tokens.AccessToken,
+          IdToken: result.tokens.IdToken,
+          RefreshToken: result.tokens.RefreshToken, // Keep for now for compatibility
+          ExpiresIn: result.tokens.ExpiresIn,
+        },
       };
     } catch (error: any) {
-      log.error({ err: error, email: data.email }, 'Authentication failed');
+      // Don't log the full error or data object (could contain password)
+      log.error(
+        {
+          errorMessage: error.message,
+          errorCode: error.code,
+          email: data.email,
+        },
+        'Authentication failed'
+      );
       throw error;
     }
   }
