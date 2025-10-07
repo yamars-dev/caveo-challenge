@@ -27,9 +27,10 @@ private_key_path = "~/path/to/your-private-key.pem"
 git_repository_url = "https://github.com/your-username/caveo.git"
 
 # Database configuration (your RDS endpoint)
-db_host = "caveo-db-prod.xxxxxxxxxx.us-east-1.rds.amazonaws.com"
-db_password = "your-secure-database-password"
+db_host = "<YOUR_RDS_ENDPOINT>"
+# db_password should never be committed; provide via Secrets Manager or CI
+# db_password = "<REDACTED>"
 
 # AWS Cognito configuration
-cognito_user_pool_id = "us-east-1_xxxxxxxxx"
-cognito_client_id = "your-cognito-client-id"
+cognito_user_pool_id = "<COGNITO_USER_POOL_ID>"
+cognito_client_id = "<COGNITO_CLIENT_ID>"

@@ -220,19 +220,21 @@ terraform apply -var-file="terraform.tfvars"
 ```bash
 NODE_ENV=development
 PORT=3000
-DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/caveo_db
+# Use a local PostgreSQL instance for development; credentials should be local-only
+DATABASE_URL=postgresql://postgres:<LOCAL_DB_PASSWORD>@localhost:5432/caveo_db
 AWS_REGION=us-east-1
-COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
-COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+# Placeholders below - replace with your environment values or prefer Secrets Manager
+COGNITO_USER_POOL_ID=<COGNITO_USER_POOL_ID>
+COGNITO_CLIENT_ID=<COGNITO_CLIENT_ID>
 ```
 
 #### Production (AWS Secrets Manager)
 ```json
 {
-  "DATABASE_URL": "postgresql://user:pass@rds-endpoint:5432/caveo_prod",
-  "COGNITO_USER_POOL_ID": "us-east-1_PROD_POOL_ID", 
-  "COGNITO_CLIENT_ID": "PROD_CLIENT_ID",
-  "JWT_SECRET": "production-jwt-secret",
+  "DATABASE_URL": "postgresql://<DB_USER>:<DB_PASS>@<RDS_ENDPOINT>:5432/<DB_NAME>",
+  "COGNITO_USER_POOL_ID": "<COGNITO_USER_POOL_ID>",
+  "COGNITO_CLIENT_ID": "<COGNITO_CLIENT_ID>",
+  "JWT_SECRET": "<JWT_SECRET>",
   "LOG_LEVEL": "info"
 }
 ```
