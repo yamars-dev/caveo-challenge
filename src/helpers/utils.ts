@@ -2,7 +2,7 @@ export function decodeJWT(token: string): any {
   try {
     const payload = token.split('.')[1];
     return JSON.parse(Buffer.from(payload, 'base64').toString());
-  } catch (error) {
+  } catch {
     throw new Error('Invalid JWT format');
   }
 }

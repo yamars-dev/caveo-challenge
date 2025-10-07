@@ -9,7 +9,7 @@ const JWKS_URI = `https://cognito-idp.${REGION}.amazonaws.com/${USER_POOL_ID}/.w
 const jwksClient = new JwksClient({
   jwksUri: JWKS_URI,
   cache: true,
-  cacheMaxAge: 600000, // 10 minutos
+  cacheMaxAge: 600000, // 10 minutes
 });
 
 function getSigningKey(header: jwt.JwtHeader): Promise<string> {
@@ -67,7 +67,7 @@ export function decodeJWT(token: string): any {
   try {
     const payload = token.split('.')[1];
     return JSON.parse(Buffer.from(payload, 'base64').toString());
-  } catch (error) {
+  } catch {
     throw new Error('Invalid JWT format');
   }
 }

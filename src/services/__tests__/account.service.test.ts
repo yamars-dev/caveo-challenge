@@ -1,6 +1,5 @@
 import { AccountService } from '../account.service.js';
 import { AppDataSource } from '../../entities/index.js';
-import { UserEntity } from '../../entities/user.entity.js';
 import { cognitoService } from '../cognito.service.js';
 
 // Mock AppDataSource

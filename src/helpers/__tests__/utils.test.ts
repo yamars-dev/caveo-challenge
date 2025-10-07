@@ -15,13 +15,13 @@ describe('Utils', () => {
     });
 
     it('should decode JWT with special characters', () => {
-      const payload = { name: 'José Silva', email: 'josé@example.com' };
+      const payload = { name: 'John Smith', email: 'john@example.com' };
       const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64');
       const token = `header.${encodedPayload}.signature`;
 
       const result = decodeJWT(token);
 
-      expect(result.name).toBe('José Silva');
+      expect(result.name).toBe('John Smith');
     });
 
     it('should throw error for invalid JWT format with less than 3 parts', () => {

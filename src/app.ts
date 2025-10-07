@@ -3,6 +3,9 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import pinoHttp from 'pino-http';
 import serve from 'koa-static';
+import helmet from 'koa-helmet';
+import rateLimit from 'koa-ratelimit';
+import cors from '@koa/cors';
 import { koaSwagger } from 'koa2-swagger-ui';
 import { useKoaServer } from 'routing-controllers';
 import { connectDatabase } from './entities/index.js';
@@ -14,8 +17,65 @@ import { authMiddleware } from './middlewares/auth.middleware.js';
 import { logger } from './helpers/logger.js';
 import { swaggerSpec } from './config/swagger.js';
 import { initializeEnvironment } from './config/env-loader.js';
+import { validateEnvironment } from './security/env-validation.js';
 
 const app = new Koa();
+
+// Validate environment variables
+validateEnvironment();
+
+// CORS configuration
+app.use(
+  cors({
+    origin: (ctx) => {
+      const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+      const origin = ctx.header.origin;
+      return origin && allowedOrigins.includes(origin) ? origin : 'http://localhost:3000';
+    },
+    credentials: true,
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    maxAge: 86400, // 24 hours
+  })
+);
+
+// Security middleware
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  })
+);
+
+// Rate limiting
+const rateLimitMap = new Map();
+app.use(
+  rateLimit({
+    driver: 'memory',
+    db: rateLimitMap,
+    duration: 60000, // 1 minute
+    errorMessage: 'Rate limit exceeded',
+    id: (ctx) => ctx.ip,
+    headers: {
+      remaining: 'Rate-Limit-Remaining',
+      reset: 'Rate-Limit-Reset',
+      total: 'Rate-Limit-Total',
+    },
+    max: 100, // 100 requests per minute
+    disableHeader: false,
+  })
+);
 
 app.use(
   pinoHttp({

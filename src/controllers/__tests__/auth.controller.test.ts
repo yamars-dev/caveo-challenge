@@ -214,7 +214,7 @@ describe('AuthController', () => {
 
       try {
         await controller.signInOrRegister(signInDto, mockContext as Context);
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 

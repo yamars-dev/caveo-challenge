@@ -1,9 +1,6 @@
 import { Context, Next } from 'koa';
 import { verifyJWT, extractToken } from '../helpers/jwt.helper.js';
 
-const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID!;
-const REGION = process.env.AWS_REGION || 'us-east-1';
-
 export const authMiddleware = async (ctx: Context, next: Next) => {
   try {
     const authHeader = ctx.headers['authorization'];
