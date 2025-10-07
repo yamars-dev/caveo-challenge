@@ -82,9 +82,13 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 export function validateEnvironment(): void {
   try {
     getEnvironmentConfig();
-    console.log('✅ Environment configuration is valid');
+  // Use structured logger instead of console to avoid leaking sensitive info
+  // Logger is dynamically imported to avoid circular dependencies during bootstrap
+  const { default: logger } = require('../helpers/logger.js');
+  logger.info('Environment configuration is valid', { config: getSafeConfig() });
   } catch (error) {
-    console.error('❌ Environment configuration error:', error);
+  const { default: logger } = require('../helpers/logger.js');
+  logger.error('Environment configuration error', { err: String(error) });
     process.exit(1);
   }
 }
