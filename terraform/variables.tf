@@ -64,13 +64,15 @@ variable "db_password" {
 
 # Cognito variables
 variable "cognito_user_pool_id" {
-  description = "Cognito User Pool ID"
+  description = "(DEPRECATED) Cognito User Pool ID (não utilizado, gerado pelo Terraform)"
   type        = string
+  default     = ""
 }
 
 variable "cognito_client_id" {
-  description = "Cognito Client ID"
+  description = "(DEPRECATED) Cognito Client ID (não utilizado, gerado pelo Terraform)"
   type        = string
+  default     = ""
   sensitive   = true
 }
 # Monitoring variables

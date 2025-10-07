@@ -12,10 +12,18 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_secretsmanager_secret" "caveo_app_environment" {
-  name                    = "caveo/app/environment"
-  description             = "Caveo API environment variables"
-  recovery_window_in_days = 7
+# ===========================
+# Cognito User Pool
+# ===========================
+
+resource "aws_cognito_user_pool" "main" {
+  name = "caveo-user-pool-${var.environment}"
+
+  auto_verified_attributes = []
+
+  admin_create_user_config {
+    allow_admin_create_user_only = false
+  }
 
   tags = {
     Application = "caveo-api"
@@ -24,24 +32,65 @@ resource "aws_secretsmanager_secret" "caveo_app_environment" {
   }
 }
 
-resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
-  secret_id = aws_secretsmanager_secret.caveo_app_environment.id
+resource "aws_cognito_user_pool_client" "main" {
+  name         = "caveo-app-client-${var.environment}"
+  user_pool_id = aws_cognito_user_pool.main.id
+  generate_secret = false
   
-  secret_string = jsonencode({
-    NODE_ENV            = "production"
-    PORT                = "3000"
-    DB_HOST             = var.db_host != "" ? var.db_host : aws_db_instance.caveo.address
-    DB_PORT             = "5432"
-    DB_USERNAME         = "caveo_admin"
-    DB_PASSWORD         = var.db_password
-    DB_DATABASE         = "caveo"
-    AWS_REGION          = var.aws_region
-    COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-    COGNITO_CLIENT_ID   = var.cognito_client_id
-  })
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH"
+  ]
 }
 
-# ECR Repository for Docker images
+resource "aws_cognito_user_group" "admin" {
+  name         = "admin"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "Administrator users with full system access"
+  precedence   = 1
+}
+
+resource "aws_cognito_user_group" "user" {
+  name         = "user"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "Regular users with limited access"
+  precedence   = 2
+}
+
+# ===========================
+# Secrets Manager (Usando Existente)
+# ===========================
+
+# Secret existente - gerencia apenas metadados
+# Importar com: terraform import aws_secretsmanager_secret.caveo_app_environment caveo/app/environment-prod
+resource "aws_secretsmanager_secret" "caveo_app_environment" {
+  name                    = "caveo/app/environment-prod"
+  description             = "Caveo API environment variables"
+  recovery_window_in_days = 7
+
+  tags = {
+    Application = "caveo-api"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Ler o conteúdo do secret (read-only, não modifica)
+data "aws_secretsmanager_secret_version" "current" {
+  secret_id = aws_secretsmanager_secret.caveo_app_environment.id
+}
+
+# ===========================
+# ECR Repository (Usando Existente)
+# ===========================
+
+# Importar com: terraform import aws_ecrpublic_repository.caveo_api 696661408331/caveo-api
 resource "aws_ecrpublic_repository" "caveo_api" {
   repository_name = "caveo-api"
 
@@ -49,7 +98,6 @@ resource "aws_ecrpublic_repository" "caveo_api" {
     about_text        = "Caveo API - Node.js application with TypeScript, Koa.js, and AWS Cognito integration"
     architectures     = ["x86-64"]
     description       = "Production-ready Node.js 22 API with enterprise security, rate limiting, and comprehensive logging"
-    logo_image_blob   = null
     operating_systems = ["Linux"]
     usage_text        = "docker pull public.ecr.aws/caveo-api:latest"
   }
@@ -58,8 +106,17 @@ resource "aws_ecrpublic_repository" "caveo_api" {
     Application = "caveo-api"
     Environment = var.environment
     Repository  = "caveo-challenge"
+    ManagedBy   = "terraform"
+  }
+
+  lifecycle {
+    ignore_changes = [repository_name]
   }
 }
+
+# ===========================
+# IAM Roles and Policies
+# ===========================
 
 resource "aws_iam_role" "caveo_ec2_role" {
   name = "caveo-ec2-role-${var.environment}"
@@ -107,9 +164,29 @@ resource "aws_iam_instance_profile" "caveo_ec2_profile" {
   role = aws_iam_role.caveo_ec2_role.name
 }
 
+# ===========================
+# Networking
+# ===========================
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# ===========================
+# Security Groups
+# ===========================
+
 resource "aws_security_group" "caveo_api" {
   name_prefix = "caveo-api-${var.environment}-"
   description = "Security group for Caveo API EC2 instances"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port   = 3000
@@ -123,8 +200,8 @@ resource "aws_security_group" "caveo_api" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = var.admin_ip != "" ? [var.admin_ip] : ["0.0.0.0/0"]
-    description = var.admin_ip != "" ? "SSH access from admin IP only" : "SSH access from anywhere (INSECURE - set admin_ip variable)"
+    cidr_blocks = var.admin_ip != "" ? [var.admin_ip] : []
+    description = var.admin_ip != "" ? "SSH access from admin IP only" : "SSH access blocked - set admin_ip variable to enable"
   }
 
   egress {
@@ -132,6 +209,7 @@ resource "aws_security_group" "caveo_api" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
@@ -139,12 +217,16 @@ resource "aws_security_group" "caveo_api" {
     Application = "caveo-api"
     Environment = var.environment
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-# Security Group for RDS
 resource "aws_security_group" "caveo_rds" {
   name_prefix = "caveo-rds-${var.environment}-"
   description = "Security group for Caveo RDS PostgreSQL"
+  vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port       = 5432
@@ -159,6 +241,7 @@ resource "aws_security_group" "caveo_rds" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
@@ -166,36 +249,35 @@ resource "aws_security_group" "caveo_rds" {
     Application = "caveo-api"
     Environment = var.environment
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-# DB Subnet Group for RDS
+# ===========================
+# RDS Database (Usando Existente)
+# ===========================
+
+# Importar com: terraform import aws_db_subnet_group.caveo <SUBNET_GROUP_NAME>
 resource "aws_db_subnet_group" "caveo" {
-  name       = "caveo-db-subnet-${var.environment}"
+  name       = "caveo-db-subnet-prod"
   subnet_ids = data.aws_subnets.default.ids
 
   tags = {
-    Name        = "caveo-db-subnet-${var.environment}"
+    Name        = "caveo-db-subnet-prod"
     Application = "caveo-api"
     Environment = var.environment
   }
-}
 
-# Get default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
-# Get default subnets
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+  lifecycle {
+    ignore_changes = [name, subnet_ids]
   }
 }
 
-# RDS PostgreSQL Instance
+# Importar com: terraform import aws_db_instance.caveo caveo-db-prod
 resource "aws_db_instance" "caveo" {
-  identifier     = "caveo-db-${var.environment}"
+  identifier     = "caveo-db-prod"
   engine         = "postgres"
   engine_version = "16.4"
   instance_class = "db.t3.micro"
@@ -212,21 +294,36 @@ resource "aws_db_instance" "caveo" {
   db_subnet_group_name   = aws_db_subnet_group.caveo.name
   vpc_security_group_ids = [aws_security_group.caveo_rds.id]
 
+  multi_az = false
+
   backup_retention_period = 7
   backup_window          = "03:00-04:00"
   maintenance_window     = "mon:04:00-mon:05:00"
 
-  skip_final_snapshot       = var.environment != "prod"
-  final_snapshot_identifier = var.environment == "prod" ? "caveo-db-final-${var.environment}-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "caveo-db-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
   tags = {
-    Name        = "caveo-db-${var.environment}"
+    Name        = "caveo-db-prod"
     Application = "caveo-api"
     Environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [
+      identifier,
+      final_snapshot_identifier,
+      allocated_storage,
+      engine_version
+    ]
+  }
 }
+
+# ===========================
+# EC2 Instance
+# ===========================
 
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -243,25 +340,24 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# User data script for EC2 initialization
 locals {
-  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
-    aws_region = var.aws_region
-    git_repo   = var.git_repository_url
-  }))
+  user_data = templatefile("${path.module}/user-data.sh", {
+    aws_region  = var.aws_region
+    git_repo    = var.git_repository_url
+    secret_name = aws_secretsmanager_secret.caveo_app_environment.name
+    environment = var.environment
+  })
 }
 
-# EC2 Key Pair and git repository variables are declared in variables.tf
-
-# EC2 Instance for Caveo API
 resource "aws_instance" "caveo_api" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
-  key_name              = var.key_pair_name
+  key_name              = var.key_pair_name != "" ? var.key_pair_name : null
   iam_instance_profile  = aws_iam_instance_profile.caveo_ec2_profile.name
   vpc_security_group_ids = [aws_security_group.caveo_api.id]
   
   user_data = local.user_data
+  user_data_replace_on_change = false
 
   root_block_device {
     volume_type = "gp3"
@@ -280,22 +376,16 @@ resource "aws_instance" "caveo_api" {
     ManagedBy   = "terraform"
   }
 
-  # Wait for instance to be ready
-  provisioner "remote-exec" {
-    inline = [
-      "cloud-init status --wait"
-    ]
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file(var.private_key_path)
-      host        = self.public_ip
-    }
+  lifecycle {
+    ignore_changes = [user_data, ami]
   }
+
+  depends_on = [
+    aws_db_instance.caveo,
+    data.aws_secretsmanager_secret_version.current
+  ]
 }
 
-# Elastic IP for stable public IP
 resource "aws_eip" "caveo_api" {
   instance = aws_instance.caveo_api.id
   domain   = "vpc"
@@ -309,92 +399,10 @@ resource "aws_eip" "caveo_api" {
   depends_on = [aws_instance.caveo_api]
 }
 
-# Additional variables are declared in variables.tf
-
-# Outputs
-output "secret_arn" {
-  description = "ARN of the Secrets Manager secret"
-  value       = aws_secretsmanager_secret.caveo_app_environment.arn
-}
-
-output "secret_name" {
-  description = "Name of the Secrets Manager secret"
-  value       = aws_secretsmanager_secret.caveo_app_environment.name
-}
-
-output "iam_instance_profile" {
-  description = "IAM instance profile for EC2"
-  value       = aws_iam_instance_profile.caveo_ec2_profile.name
-}
-
-output "security_group_id" {
-  description = "Security group ID for API instances"
-  value       = aws_security_group.caveo_api.id
-}
-
-// ec2_public_ip output is declared later in outputs (variables.tf handles variable declarations)
-
-output "ec2_instance_id" {
-  description = "ID of the EC2 instance"
-  value       = aws_instance.caveo_api.id
-}
-
-output "api_url" {
-  description = "URL of the Caveo API"
-  value       = "http://${aws_eip.caveo_api.public_ip}:3000"
-}
-
-output "health_check_url" {
-  description = "Health check URL"
-  value       = "http://${aws_eip.caveo_api.public_ip}:3000/health"
-}
-
-# Cognito User Groups for role-based access control
-resource "aws_cognito_user_group" "admin" {
-  count        = var.cognito_user_pool_id != "" ? 1 : 0
-  name         = "admin"
-  user_pool_id = var.cognito_user_pool_id
-  description  = "Administrator users with full system access"
-  precedence   = 1
-}
-
-resource "aws_cognito_user_group" "user" {
-  count        = var.cognito_user_pool_id != "" ? 1 : 0
-  name         = "user"
-  user_pool_id = var.cognito_user_pool_id
-  description  = "Regular users with limited access"
-  precedence   = 2
-}
-
-output "api_docs_url" {
-  description = "API documentation URL"
-  value       = "http://${aws_eip.caveo_api.public_ip}:3000/docs"
-}
-
-output "cognito_admin_group" {
-  description = "Cognito admin group name"
-  value       = var.cognito_user_pool_id != "" ? aws_cognito_user_group.admin[0].name : "admin"
-}
-
-output "cognito_user_group" {
-  description = "Cognito user group name"
-  value       = var.cognito_user_pool_id != "" ? aws_cognito_user_group.user[0].name : "user"
-}
-
-output "ecr_repository_uri" {
-  description = "ECR Repository URI for Docker images"
-  value       = aws_ecrpublic_repository.caveo_api.repository_uri
-}
-
-output "ecr_registry_id" {
-  description = "ECR Registry ID"
-  value       = aws_ecrpublic_repository.caveo_api.registry_id
-}
 # ===========================
 # CloudWatch Monitoring
 # ===========================
 
-# SNS Topic for RDS Alerts
 resource "aws_sns_topic" "rds_alerts" {
   name = "caveo-rds-alerts-${var.environment}"
 
@@ -405,21 +413,20 @@ resource "aws_sns_topic" "rds_alerts" {
   }
 }
 
-# SNS Topic Subscription (email)
 resource "aws_sns_topic_subscription" "rds_alerts_email" {
+  count     = var.alert_email != "" ? 1 : 0
   topic_arn = aws_sns_topic.rds_alerts.arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 
-# CloudWatch Alarm - RDS CPU Utilization
 resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
   alarm_name          = "caveo-rds-cpu-high-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
   namespace           = "AWS/RDS"
-  period              = "300" # 5 minutes
+  period              = "300"
   statistic           = "Average"
   threshold           = "80"
   alarm_description   = "This metric monitors RDS CPU utilization"
@@ -436,16 +443,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
   }
 }
 
-# CloudWatch Alarm - RDS Free Storage Space
 resource "aws_cloudwatch_metric_alarm" "rds_storage_low" {
   alarm_name          = "caveo-rds-storage-low-${var.environment}"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "1"
   metric_name         = "FreeStorageSpace"
   namespace           = "AWS/RDS"
-  period              = "300" # 5 minutes
+  period              = "300"
   statistic           = "Average"
-  threshold           = "2000000000" # 2GB in bytes
+  threshold           = "2000000000"
   alarm_description   = "This metric monitors RDS free storage space"
   alarm_actions       = [aws_sns_topic.rds_alerts.arn]
 
@@ -460,16 +466,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_storage_low" {
   }
 }
 
-# CloudWatch Alarm - RDS Database Connections
 resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
   alarm_name          = "caveo-rds-connections-high-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "DatabaseConnections"
   namespace           = "AWS/RDS"
-  period              = "300" # 5 minutes
+  period              = "300"
   statistic           = "Average"
-  threshold           = "80" # 80% of max connections for t3.micro
+  threshold           = "80"
   alarm_description   = "This metric monitors RDS database connections"
   alarm_actions       = [aws_sns_topic.rds_alerts.arn]
 
@@ -484,16 +489,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
   }
 }
 
-# CloudWatch Alarm - RDS Read Latency
 resource "aws_cloudwatch_metric_alarm" "rds_read_latency_high" {
   alarm_name          = "caveo-rds-read-latency-high-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "ReadLatency"
   namespace           = "AWS/RDS"
-  period              = "300" # 5 minutes
+  period              = "300"
   statistic           = "Average"
-  threshold           = "0.1" # 100ms
+  threshold           = "0.1"
   alarm_description   = "This metric monitors RDS read latency"
   alarm_actions       = [aws_sns_topic.rds_alerts.arn]
 
@@ -508,16 +512,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_read_latency_high" {
   }
 }
 
-# CloudWatch Alarm - RDS Write Latency
 resource "aws_cloudwatch_metric_alarm" "rds_write_latency_high" {
   alarm_name          = "caveo-rds-write-latency-high-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "WriteLatency"
   namespace           = "AWS/RDS"
-  period              = "300" # 5 minutes
+  period              = "300"
   statistic           = "Average"
-  threshold           = "0.1" # 100ms
+  threshold           = "0.1"
   alarm_description   = "This metric monitors RDS write latency"
   alarm_actions       = [aws_sns_topic.rds_alerts.arn]
 
@@ -538,7 +541,27 @@ resource "aws_cloudwatch_metric_alarm" "rds_write_latency_high" {
 
 output "ec2_public_ip" {
   description = "Public IP of the EC2 instance"
-  value       = aws_instance.caveo_api.public_ip
+  value       = aws_eip.caveo_api.public_ip
+}
+
+output "ec2_instance_id" {
+  description = "ID of the EC2 instance"
+  value       = aws_instance.caveo_api.id
+}
+
+output "api_url" {
+  description = "URL of the Caveo API"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000"
+}
+
+output "health_check_url" {
+  description = "Health check URL"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000/health"
+}
+
+output "api_docs_url" {
+  description = "API documentation URL"
+  value       = "http://${aws_eip.caveo_api.public_ip}:3000/docs"
 }
 
 output "rds_endpoint" {
@@ -562,6 +585,57 @@ output "rds_username" {
   sensitive   = true
 }
 
+output "secret_arn" {
+  description = "ARN of the Secrets Manager secret"
+  value       = aws_secretsmanager_secret.caveo_app_environment.arn
+}
+
+output "secret_name" {
+  description = "Name of the Secrets Manager secret"
+  value       = aws_secretsmanager_secret.caveo_app_environment.name
+}
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito Client ID"
+  value       = aws_cognito_user_pool_client.main.id
+  sensitive   = true
+}
+
+output "cognito_admin_group" {
+  description = "Cognito admin group name"
+  value       = aws_cognito_user_group.admin.name
+}
+
+output "cognito_user_group" {
+  description = "Cognito user group name"
+  value       = aws_cognito_user_group.user.name
+}
+
+output "ecr_repository_uri" {
+  description = "ECR Repository URI for Docker images"
+  value       = aws_ecrpublic_repository.caveo_api.repository_uri
+}
+
+output "ecr_registry_id" {
+  description = "ECR Registry ID"
+  value       = aws_ecrpublic_repository.caveo_api.registry_id
+}
+
+output "iam_instance_profile" {
+  description = "IAM instance profile for EC2"
+  value       = aws_iam_instance_profile.caveo_ec2_profile.name
+}
+
+output "security_group_id" {
+  description = "Security group ID for API instances"
+  value       = aws_security_group.caveo_api.id
+}
+
 output "sns_topic_arn" {
   description = "SNS topic ARN for RDS alerts"
   value       = aws_sns_topic.rds_alerts.arn
@@ -577,3 +651,9 @@ output "cloudwatch_alarms" {
     write_latency    = aws_cloudwatch_metric_alarm.rds_write_latency_high.alarm_name
   }
 }
+
+output "ssh_command" {
+  description = "SSH command to connect to the instance"
+  value       = var.key_pair_name != "" ? "ssh -i ${var.private_key_path} ubuntu@${aws_eip.caveo_api.public_ip}" : "SSH not configured - set key_pair_name variable"
+}
+
