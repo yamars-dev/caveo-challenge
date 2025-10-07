@@ -6,7 +6,7 @@ import {
   UpdateUserAttributesCommand,
   AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { logger } from '../helpers/logger.js';
+import { logger, maskEmail } from '../helpers/logger.js';
 
 /**
  * AWS Cognito client with timeout and retry configuration
@@ -40,21 +40,23 @@ export class CognitoService {
 
       return response.UserSub;
     } catch (error: any) {
-      logger.error({ err: error, email }, 'SignUp failed');
+  // Avoid logging full error objects (may contain sensitive data).
+  // Use masked email to reduce PII in logs
+  logger.error({ email: maskEmail(email), errorName: error?.name, errorMessage: error?.message }, 'SignUp failed');
 
-      if (error.name === 'UsernameExistsException') {
+      if (error?.name === 'UsernameExistsException') {
         throw new Error('Email already registered');
       }
 
-      if (error.name === 'InvalidPasswordException') {
+      if (error?.name === 'InvalidPasswordException') {
         throw new Error('Password does not meet requirements');
       }
 
-      if (error.name === 'InvalidParameterException') {
+      if (error?.name === 'InvalidParameterException') {
         throw new Error('Invalid email or password format');
       }
 
-      throw new Error(error.message || 'Registration failed');
+      throw new Error(error?.message || 'Registration failed');
     }
   }
 
@@ -86,25 +88,25 @@ export class CognitoService {
         ExpiresIn: authResult.ExpiresIn!,
       };
     } catch (error: any) {
-      logger.error({ err: error, email }, 'SignIn failed');
+  logger.error({ email: maskEmail(email), errorName: error?.name, errorMessage: error?.message }, 'SignIn failed');
 
-      if (error.name === 'UserNotFoundException') {
+      if (error?.name === 'UserNotFoundException') {
         throw new Error('Invalid email or password');
       }
 
-      if (error.name === 'NotAuthorizedException') {
+      if (error?.name === 'NotAuthorizedException') {
         throw new Error('Invalid email or password');
       }
 
-      if (error.name === 'UserDisabledException') {
+      if (error?.name === 'UserDisabledException') {
         throw new Error('User account is disabled');
       }
 
-      if (error.name === 'TooManyRequestsException') {
+      if (error?.name === 'TooManyRequestsException') {
         throw new Error('Too many login attempts. Please try again later');
       }
 
-      throw new Error(error.message || 'Authentication failed');
+      throw new Error(error?.message || 'Authentication failed');
     }
   }
 
@@ -137,13 +139,13 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-      logger.error({ err: error, accessToken: '[REDACTED]' }, 'UpdateUserAttributes failed');
+  logger.error({ accessToken: '[REDACTED]', errorName: error?.name, errorMessage: error?.message }, 'UpdateUserAttributes failed');
 
-      if (error.name === 'InvalidParameterException') {
+      if (error?.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
       }
 
-      if (error.name === 'NotAuthorizedException') {
+      if (error?.name === 'NotAuthorizedException') {
         throw new Error('Invalid or expired access token');
       }
 
@@ -171,17 +173,17 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-      logger.error({ err: error, username }, 'AdminUpdateUserAttributes failed');
+  logger.error({ username: maskEmail(username), errorName: error?.name, errorMessage: error?.message }, 'AdminUpdateUserAttributes failed');
 
-      if (error.name === 'UserNotFoundException') {
+      if (error?.name === 'UserNotFoundException') {
         throw new Error('User not found');
       }
 
-      if (error.name === 'InvalidParameterException') {
+      if (error?.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
       }
 
-      throw new Error(error.message || 'Failed to update user attributes');
+      throw new Error(error?.message || 'Failed to update user attributes');
     }
   }
 }
