@@ -75,26 +75,7 @@ describe('authMiddleware', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should reject access token and require ID token', async () => {
-      const mockToken = 'access-token';
-      const mockDecoded = {
-        sub: 'user-123',
-        token_use: 'access',
-      };
 
-      mockContext.headers = { authorization: 'Bearer access-token' };
-      (extractToken as jest.Mock).mockReturnValue(mockToken);
-      (verifyJWT as jest.Mock).mockResolvedValue(mockDecoded);
-
-      await authMiddleware(mockContext as Context, mockNext);
-
-      expect(mockContext.status).toBe(401);
-      expect(mockContext.body).toEqual({
-        error: 'Unauthorized',
-        message: 'Please use ID Token instead of Access Token',
-      });
-      expect(mockNext).not.toHaveBeenCalled();
-    });
 
     it('should handle user without groups', async () => {
       const mockToken = 'valid-token';

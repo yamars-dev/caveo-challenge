@@ -20,13 +20,24 @@ export const authMiddleware = async (ctx: Context, next: Next) => {
 
     const decoded = await verifyJWT(token);
 
-    if (decoded.token_use === 'access') {
-      ctx.status = 401;
-      ctx.body = {
-        error: 'Unauthorized',
-        message: 'Please use ID Token instead of Access Token',
-      };
-      return;
+    const isEditAccount = ctx.method === 'PUT' && ctx.path === '/account/edit';
+
+    if (isEditAccount) {
+      if (decoded.token_use !== 'access') {
+        ctx.status = 401;
+        ctx.body = {
+          error: 'Unauthorized',
+          message: 'Please use Access Token for this endpoint',
+        };
+      }
+    } else {
+      if (decoded.token_use !== 'id') {
+        ctx.status = 401;
+        ctx.body = {
+          error: 'Unauthorized',
+          message: 'Please use ID Token instead of Access Token',
+        };
+      }
     }
 
     ctx.state.user = {
