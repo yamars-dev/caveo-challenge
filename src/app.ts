@@ -80,13 +80,13 @@ app.use(
 app.use(async (ctx, next) => {
   const start = Date.now();
   const { method, url } = ctx.request;
-  
+
   // Skip logging for health check and favicon
   if (url === '/health' || url === '/favicon.ico') {
     await next();
     return;
   }
-  
+
   try {
     await next();
     const ms = Date.now() - start;
