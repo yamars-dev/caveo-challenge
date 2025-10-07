@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY: public.ecr.aws
+  REGISTRY: public.ecr.aws/m0t3o1p9
   IMAGE_NAME: caveo-api
 
 jobs:
