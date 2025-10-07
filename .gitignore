@@ -14,3 +14,4 @@ terraform/.terraform.lock.hcl
 terraform/terraform.tfvars
 .eslintcache
 deploy.sh
+deploy-commands.txt
