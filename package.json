@@ -29,6 +29,7 @@
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.901.0",
     "@aws-sdk/client-secrets-manager": "^3.901.0",
+    "@aws-sdk/node-http-handler": "^3.370.0",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^14.0.0",
     "class-transformer": "^0.5.1",

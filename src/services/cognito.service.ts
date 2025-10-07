@@ -7,7 +7,7 @@ import {
   AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
-import { logger, maskEmail } from '../helpers/logger.js';
+import safeLogger from '../helpers/safe-logger.js';
 
 /**
  * AWS Cognito client with timeout and retry configuration
@@ -41,8 +41,7 @@ export class CognitoService {
       return response.UserSub;
     } catch (error: any) {
   // Avoid logging full error objects (may contain sensitive data).
-  // Use masked email to reduce PII in logs
-  logger.error({ email: maskEmail(email), errorName: error?.name, errorMessage: error?.message }, 'SignUp failed');
+  safeLogger.error({ email, errorName: error?.name, errorMessage: error?.message }, 'SignUp failed');
 
       if (error?.name === 'UsernameExistsException') {
         throw new Error('Email already registered');
@@ -88,7 +87,7 @@ export class CognitoService {
         ExpiresIn: authResult.ExpiresIn!,
       };
     } catch (error: any) {
-  logger.error({ email: maskEmail(email), errorName: error?.name, errorMessage: error?.message }, 'SignIn failed');
+  safeLogger.error({ email, errorName: error?.name, errorMessage: error?.message }, 'SignIn failed');
 
       if (error?.name === 'UserNotFoundException') {
         throw new Error('Invalid email or password');
@@ -139,7 +138,7 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-  logger.error({ accessToken: '[REDACTED]', errorName: error?.name, errorMessage: error?.message }, 'UpdateUserAttributes failed');
+  safeLogger.error({ accessToken: '[REDACTED]', errorName: error?.name, errorMessage: error?.message }, 'UpdateUserAttributes failed');
 
       if (error?.name === 'InvalidParameterException') {
         throw new Error('Invalid attribute value');
@@ -173,7 +172,7 @@ export class CognitoService {
 
       await client.send(command);
     } catch (error: any) {
-  logger.error({ username: maskEmail(username), errorName: error?.name, errorMessage: error?.message }, 'AdminUpdateUserAttributes failed');
+  safeLogger.error({ username, errorName: error?.name, errorMessage: error?.message }, 'AdminUpdateUserAttributes failed');
 
       if (error?.name === 'UserNotFoundException') {
         throw new Error('User not found');
