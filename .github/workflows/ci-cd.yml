@@ -1,0 +1,96 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: public.ecr.aws
+  IMAGE_NAME: caveo-api
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: npm run lint
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Run tests with coverage
+      run: npm run test:coverage
+    
+    - name: Build TypeScript
+      run: npm run build
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Login to Amazon ECR Public
+      id: login-ecr-public
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: public
+    
+    - name: Build and push Docker image
+      run: |
+        # Build image
+        docker build -t $REGISTRY/$IMAGE_NAME:latest -t $REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+        
+        # Push images
+        docker push $REGISTRY/$IMAGE_NAME:latest
+        docker push $REGISTRY/$IMAGE_NAME:${{ github.sha }}
+    
+    - name: Deploy to EC2
+      run: |
+        # Connect to EC2 and update container
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
+        
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} '
+          # Pull latest image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          
+          # Stop current container if running
+          docker stop caveo-api || true
+          docker rm caveo-api || true
+          
+          # Run new container
+          docker run -d \
+            --name caveo-api \
+            -p 3000:3000 \
+            --env-file /home/ubuntu/.env \
+            --restart unless-stopped \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        '
+        
+        rm -f private_key.pem
