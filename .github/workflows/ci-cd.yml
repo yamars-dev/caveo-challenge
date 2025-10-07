@@ -133,47 +133,49 @@ jobs:
         chmod 600 private_key.pem
         
         ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} bash << 'ENDSSH'
-        set -e
-        
-        echo "[deploy] Installing jq if needed"
-        command -v jq || sudo apt-get update -qq && sudo apt-get install -y jq
-        
-        echo "[deploy] Fetching secrets and creating .env"
-        aws secretsmanager get-secret-value \
-          --secret-id caveo/app/environment \
-          --region us-east-1 \
-          --query SecretString \
-          --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
-        
-        echo "[deploy] Pulling latest image"
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        
-        echo "[deploy] Stopping old container"
-        docker stop caveo-api 2>/dev/null || true
-        docker rm caveo-api 2>/dev/null || true
-        
-        echo "[deploy] Starting new container"
-        docker run -d \
-          --name caveo-api \
-          -p 3000:3000 \
-          --env-file .env \
-          --restart unless-stopped \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        
-        echo "[deploy] Waiting for health check"
-        sleep 5
-        for i in {1..12}; do
-          if curl -f http://localhost:3000/health >/dev/null 2>&1; then
-            echo "[deploy] Health check passed"
-            docker image prune -f >/dev/null 2>&1 || true
-            exit 0
-          fi
+          set -e
+          
+          echo "[deploy] Installing jq if needed"
+          command -v jq || sudo apt-get update -qq && sudo apt-get install -y jq
+          
+          echo "[deploy] Fetching secrets and creating .env"
+          aws secretsmanager get-secret-value \
+            --secret-id caveo/app/environment \
+            --region us-east-1 \
+            --query SecretString \
+            --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
+          
+          echo "[deploy] Pulling latest image"
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          
+          echo "[deploy] Stopping old container"
+          docker stop caveo-api 2>/dev/null || true
+          docker rm caveo-api 2>/dev/null || true
+          
+          echo "[deploy] Starting new container"
+          docker run -d \
+            --name caveo-api \
+            -p 3000:3000 \
+            --env-file .env \
+            --restart unless-stopped \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          
+          echo "[deploy] Waiting for health check"
           sleep 5
-        done
-        
-        echo "[deploy] Health check failed"
-        docker logs caveo-api
-        exit 1
-ENDSSH
+          for i in {1..12}; do
+            if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+              echo "[deploy] Health check passed"
+              docker image prune -f >/dev/null 2>&1
+              break
+            fi
+            sleep 5
+          done
+          
+          if ! curl -f http://localhost:3000/health >/dev/null 2>&1; then
+            echo "[deploy] Health check failed"
+            docker logs caveo-api
+            exit 1
+          fi
+        ENDSSH
         
         rm -f private_key.pem
