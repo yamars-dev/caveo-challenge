@@ -1,6 +1,7 @@
 import { Context, Next } from 'koa';
 import { koaSwagger } from 'koa2-swagger-ui';
 import { swaggerSpec } from '../config/swagger.js';
+import { AppDataSource } from '../entities/index.js';
 
 /**
  * Swagger UI middleware
@@ -40,5 +41,26 @@ export const healthCheckMiddleware = async (ctx: Context, next: Next) => {
     ctx.status = 200;
     return;
   }
+  await next();
+};
+
+/**
+ * Readiness endpoint
+ * Returns 200 when application dependencies are ready (DB initialized), 503 otherwise
+ */
+export const readinessMiddleware = async (ctx: Context, next: Next) => {
+  if (ctx.path === '/ready') {
+    const dbReady = AppDataSource.isInitialized;
+
+    ctx.body = {
+      status: dbReady ? 'ok' : 'unavailable',
+      db: dbReady ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    };
+
+    ctx.status = dbReady ? 200 : 503;
+    return;
+  }
+
   await next();
 };

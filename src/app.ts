@@ -18,6 +18,7 @@ import {
   apiDocsMiddleware,
   healthCheckMiddleware,
 } from './middlewares/routes.middleware.js';
+import { readinessMiddleware } from './middlewares/routes.middleware.js';
 
 const app = new Koa();
 
@@ -35,6 +36,7 @@ app.use(serve('public') as any);
 app.use(swaggerUIMiddleware);
 app.use(apiDocsMiddleware);
 app.use(healthCheckMiddleware);
+app.use(readinessMiddleware);
 
 // Setup API controllers
 setupControllers(app);
