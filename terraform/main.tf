@@ -74,6 +74,26 @@ resource "aws_secretsmanager_secret_version" "caveo_app_environment" {
   })
 }
 
+# ECR Repository for Docker images
+resource "aws_ecrpublic_repository" "caveo_api" {
+  repository_name = "caveo-api"
+
+  catalog_data {
+    about_text        = "Caveo API - Node.js application with TypeScript, Koa.js, and AWS Cognito integration"
+    architectures     = ["x86-64"]
+    description       = "Production-ready Node.js 22 API with enterprise security, rate limiting, and comprehensive logging"
+    logo_image_blob   = null
+    operating_systems = ["Linux"]
+    usage_text        = "docker pull public.ecr.aws/caveo-api:latest"
+  }
+
+  tags = {
+    Application = "caveo-api"
+    Environment = var.environment
+    Repository  = "caveo-challenge"
+  }
+}
+
 resource "aws_iam_role" "caveo_ec2_role" {
   name = "caveo-ec2-role-${var.environment}"
 
@@ -325,4 +345,14 @@ output "cognito_admin_group" {
 output "cognito_user_group" {
   description = "Cognito user group name"
   value       = var.cognito_user_pool_id != "" ? aws_cognito_user_group.user[0].name : "user"
+}
+
+output "ecr_repository_uri" {
+  description = "ECR Repository URI for Docker images"
+  value       = aws_ecrpublic_repository.caveo_api.repository_uri
+}
+
+output "ecr_registry_id" {
+  description = "ECR Registry ID"
+  value       = aws_ecrpublic_repository.caveo_api.registry_id
 }

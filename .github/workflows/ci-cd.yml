@@ -98,16 +98,6 @@ jobs:
       with:
         registry-type: public
     
-    - name: Create ECR repository if it doesn't exist
-      run: |
-        # Check if repository exists and create if it doesn't
-        aws ecr-public describe-repositories --repository-names $IMAGE_NAME --region us-east-1 || \
-        aws ecr-public create-repository \
-          --repository-name $IMAGE_NAME \
-          --repository-catalog-data \
-          'description=Caveo API - Node.js application with TypeScript,architectures=x86-64,operatingSystems=Linux' \
-          --region us-east-1
-    
     - name: Build and push Docker image
       run: |
         # Build image
