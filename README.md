@@ -211,14 +211,51 @@ npm test -- auth.service.test.ts
 
 The API is documented with Swagger/OpenAPI and available at `/docs` when running.
 
+### Authentication Tokens: ID Token vs Access Token
+
+This API uses AWS Cognito tokens for authentication. **Different endpoints require different token types:**
+
+| Endpoint                  | Method | Token Required | Notes |
+|--------------------------|--------|---------------|-------|
+| /api/account/me          | GET    | ID Token      | Use the ID Token from Cognito after login |
+| /api/account/edit        | PUT    | Access Token  | Use the Access Token from Cognito after login |
+| /api/users               | GET    | ID Token      | Admin only; requires ID Token |
+
+**How to obtain tokens:**
+- After authenticating with Cognito (via `/api/auth`), you will receive both an **ID Token** and an **Access Token**.
+- The **ID Token** is used for most endpoints to identify the user and provide profile information.
+- The **Access Token** is required **only** for sensitive operations like editing your account (`PUT /api/account/edit`).
+
+**How to use:**
+- Pass the required token in the `Authorization` header as: `Bearer <TOKEN>`
+- If you use the wrong token type, you will receive a 401 Unauthorized error with a message indicating which token is required.
+
+**Example:**
+```bash
+# Get account info (ID Token)
+curl -H "Authorization: Bearer <ID_TOKEN>" http://YOUR_EC2_IP:3000/api/account/me
+
+# Edit account (Access Token)
+curl -X PUT -H "Authorization: Bearer <ACCESS_TOKEN>" -d '{...}' http://YOUR_EC2_IP:3000/api/account/edit
+```
+
+For more details, see the [auth middleware](src/middlewares/auth.middleware.ts) or the Swagger UI at `/docs`.
 ### Endpoints
 
 #### Authentication
-- `POST /api/auth` - Register or login (sign in or register combined endpoint)
+`POST /api/auth` - Register or login (sign in or register combined endpoint)
 
 #### Account Management
-- `GET /api/account/me` - Get current user account information
-- `PUT /api/account/edit` - Update account information
+`GET /api/account/me` - Get current user account information
+`PUT /api/account/edit` - Update account information
+
+#### User Management (Admin Only)
+`GET /api/users` - List all users (requires admin role)
+
+#### Documentation
+`GET /docs` - Swagger UI interface
+`GET /api-docs.json` - OpenAPI specification
+`GET /health` - Service health check
 
 #### User Management (Admin Only)
 - `GET /api/users` - List all users (requires admin role)
