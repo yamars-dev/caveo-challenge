@@ -113,26 +113,40 @@ jobs:
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > private_key.pem
         chmod 600 private_key.pem
         
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} '
-          set -e
-          # Ensure jq installed
-          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y jq >/dev/null 2>&1; fi;
-          # Rebuild /home/ubuntu/.env from Secrets Manager
-          aws secretsmanager get-secret-value --secret-id caveo/app/environment --region us-east-1 --query SecretString --output text \
-            | jq -r 'fromjson | to_entries | .[] | "\(.key)=\(.value)"' > /home/ubuntu/.env;
-          chmod 600 /home/ubuntu/.env;
-          # Pull latest image
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest;
-          # Stop/remove existing
-            docker stop caveo-api || true;
-            docker rm caveo-api || true;
-          # Run new container
-          docker run -d \
-            --name caveo-api \
-            -p 3000:3000 \
-            --env-file /home/ubuntu/.env \
-            --restart unless-stopped \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest;
-        '
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+echo '[deploy] Preparing environment file from Secrets Manager'
+if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get install -y jq >/dev/null 2>&1; fi
+
+SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id caveo/app/environment --region us-east-1 --query SecretString --output text || true)
+if [ -z "$SECRET_JSON" ]; then
+  echo '[deploy][error] Failed to retrieve secret caveo/app/environment'
+  exit 1
+fi
+
+printf '%s' "$SECRET_JSON" | jq -r 'fromjson | to_entries[] | "\(.key)=\(.value)"' > /home/ubuntu/.env.tmp
+mv /home/ubuntu/.env.tmp /home/ubuntu/.env
+chmod 600 /home/ubuntu/.env
+echo '[deploy] .env generated'
+
+echo '[deploy] Pulling image'
+docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+echo '[deploy] Stopping previous container if exists'
+docker stop caveo-api 2>/dev/null || true
+docker rm caveo-api 2>/dev/null || true
+
+echo '[deploy] Starting new container'
+docker run -d \
+  --name caveo-api \
+  -p 3000:3000 \
+  --env-file /home/ubuntu/.env \
+  --restart unless-stopped \
+  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+echo '[deploy] Container status:'
+docker ps --filter name=caveo-api --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+REMOTE_SCRIPT
         
         rm -f private_key.pem
