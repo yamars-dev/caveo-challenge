@@ -148,7 +148,7 @@ jobs:
           echo "[deploy] Fetching secrets and creating .env with secure permissions"
           # Create .env with restricted permissions (600 = rw-------)
           (umask 077 && aws secretsmanager get-secret-value \
-            --secret-id caveo/app/environment \
+            --secret-id caveo/app/environment-prod \
             --region us-east-1 \
             --query SecretString \
             --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env)
