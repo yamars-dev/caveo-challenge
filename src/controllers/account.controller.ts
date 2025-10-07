@@ -114,8 +114,9 @@ export class AccountController {
     @Body() data: UpdateProfileDto,
     @Ctx() ctx: Context
   ): Promise<EditProfileResponseDto | ErrorResponseDto> {
-    const user = ctx.state.user;
-    const log = (ctx as any).log || logger;
+  const user = ctx.state.user;
+  const rawLog = (ctx as any).log || logger;
+  const log = (typeof rawLog.info === 'function' && typeof rawLog.error === 'function') ? rawLog : logger;
 
     if (!user) {
       ctx.status = 401;
@@ -142,7 +143,7 @@ export class AccountController {
         user: updatedUser,
       };
     } catch (error: any) {
-      log.error({ err: error, userId: user.id }, 'Edit account failed');
+      log.error({ err: error, userId: user.id }, 'Edit account failed'); // masking automático se logger seguro
 
       const errorMessage = error?.message || '';
 

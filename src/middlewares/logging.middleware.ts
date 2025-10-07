@@ -1,5 +1,6 @@
 import { Context, Next } from 'koa';
 import { logger } from '../helpers/logger.js';
+import { wrapLogger } from '../helpers/safe-logger.js';
 
 /**
  * Request logging middleware
@@ -64,6 +65,8 @@ export const loggingMiddleware = async (ctx: Context, next: Next) => {
  * Makes logger available in controllers as ctx.log
  */
 export const loggerContextMiddleware = async (ctx: Context, next: Next) => {
-  (ctx as any).log = logger;
+  // Inject a wrapped logger so any logger usage (including test mocks)
+  // will go through the sanitization pipeline.
+  (ctx as any).log = wrapLogger(logger);
   await next();
 };

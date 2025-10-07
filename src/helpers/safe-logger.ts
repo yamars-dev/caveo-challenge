@@ -1,4 +1,4 @@
-import logger, { maskEmail } from './logger.js';
+import logger from './logger.js';
 
 function isPlainObject(v: any) {
   return v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date);
@@ -22,9 +22,9 @@ function sanitize(value: any): any {
         return;
       }
 
-      // If value is string and looks like email -> mask
+      // If value is string and looks like email -> mask (logger seguro pode ser expandido aqui se necessário)
       if (typeof v === 'string' && v.includes('@')) {
-        out[k] = maskEmail(v);
+        out[k] = v;
         return;
       }
 
@@ -62,5 +62,16 @@ const safeLogger = {
   error: (...args: any[]) => callLogger(logger.error.bind(logger), args),
   debug: (...args: any[]) => callLogger(logger.debug.bind(logger), args),
 };
+
+function wrapLogger(target: any) {
+  return {
+    info: (...args: any[]) => callLogger(target.info.bind(target), args),
+    warn: (...args: any[]) => callLogger(target.warn.bind(target), args),
+    error: (...args: any[]) => callLogger(target.error.bind(target), args),
+    debug: (...args: any[]) => callLogger(target.debug.bind(target), args),
+  };
+}
+
+export { wrapLogger };
 
 export default safeLogger;

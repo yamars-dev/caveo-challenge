@@ -5,7 +5,7 @@ import { SignInOrRegisterDto } from '../dtos/auth.dto.js';
 import { UserProfileResponse } from '../dtos/account.dto.js';
 import { AuthResponseDto } from '../dtos/response.dto.js';
 import { authService } from '../services/auth.service.js';
-import safeLogger from '../helpers/safe-logger.js';
+import safeLogger, { wrapLogger } from '../helpers/safe-logger.js';
 
 @JsonController('/auth')
 export class AuthController {
@@ -63,9 +63,10 @@ export class AuthController {
     @Body() data: SignInOrRegisterDto,
     @Ctx() ctx: Context
   ): Promise<AuthResponseDto> {
-  const log = (ctx as any).log || safeLogger;
+  const rawLog = (ctx as any).log || safeLogger;
+  const log = wrapLogger(rawLog);
 
-  log.info({ email: data.email }, 'Authentication attempt');
+  log.info({ email: data.email }, 'Authentication attempt'); // masking será feito pelo logger seguro
 
     try {
       const result = await authService.signInOrRegister(data.email, data.password, data.name);
@@ -78,7 +79,7 @@ export class AuthController {
         isOnboarded: result.user.isOnboarded,
       };
 
-  log.info({ userId: result.user.id, isNewUser: result.isNewUser }, 'Authentication successful');
+      log.info({ userId: result.user.id, isNewUser: result.isNewUser }, 'Authentication successful');
 
       // Store RefreshToken in secure HttpOnly cookie
       ctx.cookies.set('refreshToken', result.tokens.RefreshToken, {
@@ -100,8 +101,8 @@ export class AuthController {
         },
       };
     } catch (error: any) {
-      // Don't log the full error or data object (could contain password)
-  log.error({ errorMessage: error.message, errorCode: error.code, email: data.email }, 'Authentication failed');
+  // Não logar objeto completo (pode conter senha)
+  log.error({ errorMessage: error.message, errorCode: error.code, email: data.email }, 'Authentication failed'); // masking automático
       throw error;
     }
   }

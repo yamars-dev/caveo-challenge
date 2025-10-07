@@ -6,14 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 /**
  * Mask an email for safe logging. Example: user@example.com -> u***@example.com
  */
-export function maskEmail(email?: string | null): string | undefined {
-  if (!email) return undefined;
-  const at = email.indexOf('@');
-  if (at <= 1) return '***@***';
-  const local = email.slice(0, at);
-  const domain = email.slice(at + 1);
-  return `${local[0]}***@${domain}`;
-}
+
 
 export const logger = pino({
   // In production, use 'warn' by default to reduce log volume

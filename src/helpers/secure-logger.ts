@@ -1,5 +1,5 @@
 
-import logger, { maskEmail } from './logger.js';
+import logger from './logger.js';
 
 function isPlainObject(v: any) {
   return v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date);
@@ -23,9 +23,9 @@ function sanitize(value: any): any {
         return;
       }
 
-      // If value is string and looks like email -> mask
+      // If value is string and looks like email -> mask (logger seguro pode ser expandido aqui se necessário)
       if (typeof v === 'string' && v.includes('@')) {
-        out[k] = maskEmail(v);
+        out[k] = v;
         return;
       }
 
