@@ -5,6 +5,8 @@
  * It supports both development (local .env) and production (AWS Secrets Manager) environments.
  */
 
+import logger from '../helpers/logger.js';
+
 export interface EnvironmentConfig {
   // Application
   nodeEnv: 'development' | 'production' | 'test';
@@ -93,13 +95,9 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 export function validateEnvironment(): void {
   try {
     getEnvironmentConfig();
-    // Use structured logger instead of console to avoid leaking sensitive info
-    // Logger is dynamically imported to avoid circular dependencies during bootstrap
-    const { default: logger } = require('../helpers/logger.js');
-    logger.info('Environment configuration is valid', { config: getSafeConfig() });
+    logger.info({ config: getSafeConfig() }, 'Environment configuration is valid');
   } catch (error) {
-    const { default: logger } = require('../helpers/logger.js');
-    logger.error('Environment configuration error', { err: String(error) });
+    logger.error({ err: String(error) }, 'Environment configuration error');
     process.exit(1);
   }
 }
