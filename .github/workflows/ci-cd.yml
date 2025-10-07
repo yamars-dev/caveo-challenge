@@ -132,7 +132,7 @@ jobs:
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > private_key.pem
         chmod 600 private_key.pem
         
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'ENDSSH'
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} bash << 'ENDSSH'
         set -e
         
         echo "[deploy] Installing jq if needed"
@@ -163,9 +163,9 @@ jobs:
         echo "[deploy] Waiting for health check"
         sleep 5
         for i in {1..12}; do
-          if curl -f http://localhost:3000/health; then
+          if curl -f http://localhost:3000/health >/dev/null 2>&1; then
             echo "[deploy] Health check passed"
-            docker image prune -f || true
+            docker image prune -f >/dev/null 2>&1 || true
             exit 0
           fi
           sleep 5
@@ -174,8 +174,6 @@ jobs:
         echo "[deploy] Health check failed"
         docker logs caveo-api
         exit 1
-        ENDSSH
+ENDSSH
         
-        EXIT_CODE=$?
         rm -f private_key.pem
-        exit $EXIT_CODE
