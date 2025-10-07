@@ -63,9 +63,10 @@ describe('AuthController', () => {
         signInDto.password,
         signInDto.name
       );
-      expect(result.message).toBe('Login successful');
-      expect(result.user).toEqual(mockServiceResponse.user);
-      expect(result.tokens).toEqual(mockServiceResponse.tokens);
+      expect(result).toBeDefined();
+      expect(result!.message).toBe('Login successful');
+      expect(result!.user).toEqual(mockServiceResponse.user);
+      expect(result!.tokens).toEqual(mockServiceResponse.tokens);
       expect(mockContext.log?.info).toHaveBeenCalledWith(
         { email: signInDto.email },
         'Authentication attempt'
@@ -97,10 +98,10 @@ describe('AuthController', () => {
 
       (authService.signInOrRegister as jest.Mock).mockResolvedValue(mockServiceResponse);
 
-      const result = await controller.signInOrRegister(signInDto, mockContext as Context);
-
-      expect(result.user.name).toBe('');
-      expect(result.user.isOnboarded).toBe(false);
+  const result = await controller.signInOrRegister(signInDto, mockContext as Context);
+  expect(result).toBeDefined();
+  expect(result!.user.name).toBe('');
+  expect(result!.user.isOnboarded).toBe(false);
     });
   });
 
@@ -139,12 +140,13 @@ describe('AuthController', () => {
         registerDto.password,
         registerDto.name
       );
-      expect(result.message).toBe('Registration successful');
-      expect(result.user.isOnboarded).toBe(false);
-      expect(result.user.id).toBe('new-user-123');
-      expect(result.tokens.AccessToken).toBeDefined();
-      expect(result.tokens.IdToken).toBeDefined();
-      expect(result.tokens.RefreshToken).toBeDefined();
+      expect(result).toBeDefined();
+      expect(result!.message).toBe('Registration successful');
+      expect(result!.user.isOnboarded).toBe(false);
+      expect(result!.user.id).toBe('new-user-123');
+      expect(result!.tokens.AccessToken).toBeDefined();
+      expect(result!.tokens.IdToken).toBeDefined();
+      expect(result!.tokens.RefreshToken).toBeDefined();
     });
 
     it('should log registration success', async () => {
@@ -188,9 +190,7 @@ describe('AuthController', () => {
       const mockError = new Error('Invalid credentials');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
-        'Invalid credentials'
-      );
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('Invalid credentials');
 
       expect(mockContext.log?.error).toHaveBeenCalledWith(
         {
@@ -207,25 +207,19 @@ describe('AuthController', () => {
     });
 
     it('should handle different error types', async () => {
-      const mockError = new Error('UserNotFoundException');
-      (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
+  const mockError = new Error('UserNotFoundException');
+  (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow(
-        'UserNotFoundException'
-      );
+  await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('UserNotFoundException');
 
-      expect(mockContext.log?.error).toHaveBeenCalled();
+  expect(mockContext.log?.error).toHaveBeenCalled();
     });
 
     it('should log authentication attempt even when it fails', async () => {
       const mockError = new Error('Authentication failed');
       (authService.signInOrRegister as jest.Mock).mockRejectedValue(mockError);
 
-      try {
-        await controller.signInOrRegister(signInDto, mockContext as Context);
-      } catch {
-        // Expected to throw
-      }
+      await expect(controller.signInOrRegister(signInDto, mockContext as Context)).rejects.toThrow('Authentication failed');
 
       expect(mockContext.log?.info).toHaveBeenCalledWith(
         { email: signInDto.email },
@@ -262,21 +256,21 @@ describe('AuthController', () => {
 
       (authService.signInOrRegister as jest.Mock).mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.signInOrRegister(signInDto, mockContext as Context);
-
-      expect(result).toHaveProperty('message');
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('tokens');
-      expect(result.user).toHaveProperty('id');
-      expect(result.user).toHaveProperty('email');
-      expect(result.user).toHaveProperty('name');
-      expect(result.user).toHaveProperty('role');
-      expect(result.user).toHaveProperty('isOnboarded');
-      expect(result.tokens).toHaveProperty('AccessToken');
-      expect(result.tokens).toHaveProperty('IdToken');
-      expect(result.tokens).toHaveProperty('RefreshToken');
-      expect(result.tokens).toHaveProperty('ExpiresIn');
-      expect(result.user.role).toBe('admin');
+  const result = await controller.signInOrRegister(signInDto, mockContext as Context);
+  expect(result).toBeDefined();
+  expect(result).toHaveProperty('message');
+  expect(result).toHaveProperty('user');
+  expect(result).toHaveProperty('tokens');
+  expect(result!.user).toHaveProperty('id');
+  expect(result!.user).toHaveProperty('email');
+  expect(result!.user).toHaveProperty('name');
+  expect(result!.user).toHaveProperty('role');
+  expect(result!.user).toHaveProperty('isOnboarded');
+  expect(result!.tokens).toHaveProperty('AccessToken');
+  expect(result!.tokens).toHaveProperty('IdToken');
+  expect(result!.tokens).toHaveProperty('RefreshToken');
+  expect(result!.tokens).toHaveProperty('ExpiresIn');
+  expect(result!.user.role).toBe('admin');
     });
   });
 });

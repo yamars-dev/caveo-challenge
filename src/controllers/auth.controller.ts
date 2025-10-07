@@ -1,4 +1,4 @@
-import { JsonController, Post, Body, HttpCode, Ctx } from 'routing-controllers';
+import { JsonController, Post, Body, HttpCode, Ctx, BadRequestError } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { SignInOrRegisterDto } from '../dtos/auth.dto.js';
@@ -62,11 +62,11 @@ export class AuthController {
   async signInOrRegister(
     @Body() data: SignInOrRegisterDto,
     @Ctx() ctx: Context
-  ): Promise<AuthResponseDto> {
-  const rawLog = (ctx as any).log || safeLogger;
-  const log = wrapLogger(rawLog);
+  ): Promise<AuthResponseDto | void> {
+    const rawLog = (ctx as any).log || safeLogger;
+    const log = wrapLogger(rawLog);
 
-  log.info({ email: data.email }, 'Authentication attempt'); // masking será feito pelo logger seguro
+    log.info({ email: data.email }, 'Authentication attempt'); // masking será feito pelo logger seguro
 
     try {
       const result = await authService.signInOrRegister(data.email, data.password, data.name);
@@ -81,29 +81,19 @@ export class AuthController {
 
       log.info({ userId: result.user.id, isNewUser: result.isNewUser }, 'Authentication successful');
 
-      // Store RefreshToken in secure HttpOnly cookie
-      ctx.cookies.set('refreshToken', result.tokens.RefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      });
-
-      // Return only AccessToken and IdToken (not RefreshToken)
       return {
         message: result.isNewUser ? 'Registration successful' : 'Login successful',
         user: userResponse,
         tokens: {
           AccessToken: result.tokens.AccessToken,
           IdToken: result.tokens.IdToken,
-          RefreshToken: result.tokens.RefreshToken, // Keep for now for compatibility
+          RefreshToken: result.tokens.RefreshToken,
           ExpiresIn: result.tokens.ExpiresIn,
         },
       };
     } catch (error: any) {
-  // Não logar objeto completo (pode conter senha)
-  log.error({ errorMessage: error.message, errorCode: error.code, email: data.email }, 'Authentication failed'); // masking automático
-      throw error;
+      log.error({ errorMessage: error.message, errorCode: error.code, email: data.email }, 'Authentication failed');
+      throw new BadRequestError(error.message || 'Authentication failed');
     }
   }
 }

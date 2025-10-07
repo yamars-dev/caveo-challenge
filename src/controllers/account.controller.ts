@@ -1,4 +1,4 @@
-import { JsonController, Get, Put, Body, Ctx, Authorized } from 'routing-controllers';
+import { JsonController, Get, Put, Body, Ctx, Authorized, BadRequestError } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
 import { Context } from 'koa';
 import { accountService } from '../services/account.service.js';
@@ -114,9 +114,9 @@ export class AccountController {
     @Body() data: UpdateProfileDto,
     @Ctx() ctx: Context
   ): Promise<EditProfileResponseDto | ErrorResponseDto> {
-  const user = ctx.state.user;
-  const rawLog = (ctx as any).log || logger;
-  const log = (typeof rawLog.info === 'function' && typeof rawLog.error === 'function') ? rawLog : logger;
+    const user = ctx.state.user;
+    const rawLog = (ctx as any).log || logger;
+    const log = (typeof rawLog.info === 'function' && typeof rawLog.error === 'function') ? rawLog : logger;
 
     if (!user) {
       ctx.status = 401;
@@ -143,35 +143,8 @@ export class AccountController {
         user: updatedUser,
       };
     } catch (error: any) {
-      log.error({ err: error, userId: user.id }, 'Edit account failed'); // masking automático se logger seguro
-
-      const errorMessage = error?.message || '';
-
-      if (
-        errorMessage.includes('permission') ||
-        errorMessage.includes('only edit your own') ||
-        errorMessage.includes('cannot demote yourself')
-      ) {
-        ctx.status = 403;
-        return {
-          error: 'Forbidden',
-          message: errorMessage,
-        };
-      }
-
-      if (errorMessage === 'User not found') {
-        ctx.status = 404;
-        return {
-          error: 'User not found',
-          message: 'User not found',
-        };
-      }
-
-      ctx.status = 500;
-      return {
-        error: 'Internal server error',
-        message: errorMessage || 'Failed to update profile',
-      };
+      log.error({ err: error, userId: user.id }, 'Edit account failed');
+      throw new BadRequestError(error.message || 'Failed to update profile');
     }
   }
 }
